@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+:root {
+    --glass: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --primary: #6366f1; /* Indigo Moderno */
+    --accent: #10b981;
+    --text: #f8fafc;
+    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body {
+    background: var(--bg-gradient);
+    background-attachment: fixed;
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+}
+
+/* Container de Vidro */
+.glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 2rem;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.8);
+    margin-bottom: 2rem;
+}
+
+h2, h3 { margin-bottom: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+
+input {
+    width: 100%;
+    padding: 14px;
+    margin: 8px 0;
+    border-radius: 10px;
+    border: 1px solid var(--glass-border);
+    background: rgba(0, 0, 0, 0.2);
+    color: white;
+    transition: 0.3s;
+}
+
+input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
+
+button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+}
+
+button:hover { background: #4f46e5; transform: translateY(-2px); }
+
+/* Grid de Produtos */
+.product-grid { display: grid; gap: 1rem; margin-top: 1.5rem; }
+
+.product-item {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 1rem;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid transparent;
+}
+
+.product-item:hover { border-color: var(--glass-border); background: rgba(255, 255, 255, 0.07); }
+
+.badge-admin {
+    background: var(--primary);
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-left: 10px;
+}
+
+footer {
+    margin-top: auto;
+    padding: 20px;
+    font-size: 0.8rem;
+    opacity: 0.6;
+    text-align: center;
+}

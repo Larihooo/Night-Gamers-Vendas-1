@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Satus Store | Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="auth-container" class="glass-card">
+        <h2 id="auth-title">Bem-vindo</h2>
+        <input type="email" id="email" placeholder="E-mail">
+        <input type="password" id="pass" placeholder="Senha">
+        <button onclick="authAction()" id="btn-auth">Entrar</button>
+        <p onclick="toggleAuth()" style="text-align:center; margin-top:15px; cursor:pointer; font-size:14px">
+            Não tem uma conta? <span style="color:var(--primary)">Cadastre-se</span>
+        </p>
+    </div>
+
+    <div id="app-container" class="glass-card" style="display:none;">
+        <header style="display:flex; justify-content: space-between; align-items: center;">
+            <div>
+                <span id="user-email-tag" style="font-weight:600"></span>
+                <div id="admin-indicator"></div>
+            </div>
+            <button onclick="logout()" style="width:auto; padding:8px 15px; background:rgba(239, 68, 68, 0.2); color:#ef4444">Sair</button>
+        </header>
+
+        <details style="margin-top:20px; font-size:14px; color:#94a3b8">
+            <summary style="cursor:pointer">Configurações de Conta (Senha/E-mail)</summary>
+            <div style="padding-top:10px">
+                <input type="password" id="new-pass" placeholder="Nova Senha">
+                <button onclick="changePassword()" style="font-size:12px; padding:8px">Atualizar Senha</button>
+            </div>
+        </details>
+
+        <div id="admin-panel" style="display:none; border-top: 1px solid var(--glass-border); margin-top:20px; padding-top:20px;">
+            <h3 style="color:var(--accent)">Gerenciar Inventário</h3>
+            <input type="text" id="p-name" placeholder="Nome do Produto">
+            <input type="text" id="p-price" placeholder="Preço (Ex: R$ 99,90)">
+            <button onclick="addProduct()" style="background:var(--accent)">Adicionar ao Site</button>
+        </div>
+
+        <div style="margin-top:30px">
+            <h3>Produtos</h3>
+            <input type="text" id="search" placeholder="🔍 Pesquisar no estoque..." onkeyup="render()">
+            <div id="product-list" class="product-grid"></div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2024 Elias Santos. Todos os direitos reservados. <br>
+        <small>Sistema de Gerenciamento de Identidade e Dados.</small>
+    </footer>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
