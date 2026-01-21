@@ -4,194 +4,103 @@
     <meta charset="UTF-8">
     <title>Painel Admin - Night Gamers</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .preview-img {
-            width: 100%; max-height: 200px; object-fit: contain;
-            background: #000; border-radius: 8px; margin-top: 10px; display: none;
-        }
-        .btn-edit { background: #f59e0b !important; width: auto; padding: 5px 10px; font-size: 12px; }
-        .btn-cancel { background: #64748b !important; margin-top: 5px; display: none; }
-        .search-admin-container {
-            background: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            border: 1px solid var(--border);
-        }
-    </style>
 </head>
 <body>
     <nav>
-        <a href="index.html">⬅ Voltar para Loja</a>
-        <span style="color:var(--accent)">Gerenciamento de Estoque</span>
+        <a href="index.html">⬅ Voltar</a>
+        <span>Gerenciar Inventário</span>
     </nav>
 
     <div class="container">
         <div class="card" id="form-topo">
-            <h3 id="form-title">Adicionar Novo Produto</h3>
+            <h3 id="form-title">Novo Produto</h3>
+            <input type="text" id="nome" placeholder="Nome do Produto">
+            <input type="url" id="img-url" placeholder="Link da Imagem (ImgBB)" oninput="document.getElementById('previa').src=this.value; document.getElementById('previa').style.display='block'">
+            <img id="previa" style="width:100%; max-height:150px; object-fit:contain; display:none; margin:10px 0">
             
-            <label>1. Link da Imagem</label>
-            <input type="url" id="img-url" placeholder="Link do ImgBB ou similar" oninput="verPrevia()">
-            <img id="img-preview" class="preview-img">
-            
-            <label style="margin-top:15px; display:block">2. Nome do Produto</label>
-            <input type="text" id="nome" placeholder="Ex: Headset Gamer Pro">
-            
-            <div style="display:flex; gap:15px">
-                <div style="flex:1">
-                    <label>3. Preço (R$)</label>
-                    <input type="number" id="preco" placeholder="0.00">
-                </div>
-                <div style="flex:1">
-                    <label>4. Quantidade em Estoque</label>
-                    <input type="number" id="estoque" placeholder="Ex: 5">
-                </div>
+            <div style="display:flex; gap:10px">
+                <input type="number" id="preco" placeholder="Preço R$">
+                <input type="number" id="estoque" placeholder="Qtd Estoque">
             </div>
 
-            <label style="margin-top:15px; display:block">5. Descrição Detalhada</label>
-            <textarea id="desc" placeholder="Descreva o produto..." rows="4"></textarea>
+            <label style="color:var(--accent); font-size:12px">CONTEÚDO PARA ENTREGA (LINK OU CHAVE):</label>
+            <textarea id="entrega" placeholder="O que o cliente recebe após pagar?" rows="2"></textarea>
             
-            <button id="btn-acao" onclick="processarAcao()">Publicar Produto</button>
-            <button id="btn-cancelar" class="btn-cancel" onclick="cancelarEdicao()">Cancelar Edição</button>
+            <textarea id="desc" placeholder="Descrição na loja..." rows="2"></textarea>
+            
+            <button id="btn-acao" onclick="salvar()">Publicar Produto</button>
+            <button id="btn-cancel" onclick="location.reload()" style="display:none; background:#666">Cancelar</button>
         </div>
 
-        <hr style="margin: 40px 0; border: 0; border-top: 1px solid #333;">
-
-        <div class="search-admin-container">
-            <label>🔍 Localizar item no inventário</label>
-            <input type="text" id="input-busca-admin" placeholder="Digite o nome do produto para editar ou excluir..." onkeyup="renderLista()">
-        </div>
-
-        <h3>Itens no Inventário</h3>
-        <div id="lista-admin">Carregando...</div>
+        <input type="text" id="busca" placeholder="🔍 Procurar no meu estoque..." onkeyup="listar()" style="margin-top:30px">
+        <div id="lista-admin"></div>
     </div>
 
     <script type="module">
         import { db, auth, ADMIN_EMAIL } from './firebase.js';
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
         import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        let idEdicao = null; // Guarda o ID se estivermos editando
-        let produtosLocal = [];
+        let idEdicao = null;
+        let produtos = [];
 
-        // Segurança Admin
-        onAuthStateChanged(auth, (user) => {
-            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "index.html";
-        });
-
-        // Prévia da Imagem
-        window.verPrevia = () => {
-            const url = document.getElementById('img-url').value;
-            const img = document.getElementById('img-preview');
-            img.src = url;
-            img.style.display = url ? 'block' : 'none';
-        };
-
-        // Função Principal: Publicar ou Atualizar
-        window.processarAcao = async () => {
+        window.salvar = async () => {
             const dados = {
                 nome: document.getElementById('nome').value,
                 preco: document.getElementById('preco').value,
                 estoque: parseInt(document.getElementById('estoque').value),
-                descricao: document.getElementById('desc').value,
                 imagem: document.getElementById('img-url').value,
+                entrega: document.getElementById('entrega').value,
+                descricao: document.getElementById('desc').value,
                 atualizadoEm: new Date()
             };
 
-            if(!dados.nome || !dados.preco || isNaN(dados.estoque) || !dados.imagem) {
-                return alert("Preencha todos os campos obrigatórios!");
+            if(idEdicao) {
+                await updateDoc(doc(db, "produtos", idEdicao), dados);
+                alert("Atualizado!");
+            } else {
+                dados.criadoEm = new Date();
+                await addDoc(collection(db, "produtos"), dados);
+                alert("Criado!");
             }
+            location.reload();
+        }
 
-            try {
-                if(idEdicao) {
-                    // MODO EDIÇÃO
-                    await updateDoc(doc(db, "produtos", idEdicao), dados);
-                    alert("Produto atualizado com sucesso!");
-                } else {
-                    // MODO NOVO
-                    dados.criadoEm = new Date();
-                    await addDoc(collection(db, "produtos"), dados);
-                    alert("Produto publicado!");
-                }
-                cancelarEdicao(); // Limpa o formulário
-            } catch(e) { alert("Erro: " + e.message); }
-        };
+        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
+            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            listar();
+        });
 
-        // Função para carregar dados no form para editar
-        window.prepararEdicao = (id) => {
-            const p = produtosLocal.find(item => item.id === id);
-            if(!p) return;
+        window.listar = () => {
+            const termo = document.getElementById('busca').value.toLowerCase();
+            const div = document.getElementById('lista-admin');
+            div.innerHTML = "";
+            produtos.filter(p => p.nome.toLowerCase().includes(termo)).forEach(p => {
+                div.innerHTML += `
+                <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:10px">
+                    <span>${p.nome} (Qtd: ${p.estoque})</span>
+                    <div>
+                        <button onclick="editar('${p.id}')" style="width:auto; background:orange; padding:5px">Editar</button>
+                        <button onclick="apagar('${p.id}')" style="width:auto; background:red; padding:5px">X</button>
+                    </div>
+                </div>`;
+            });
+        }
 
+        window.editar = (id) => {
+            const p = produtos.find(x => x.id === id);
             idEdicao = id;
-            document.getElementById('form-title').innerText = "Editando: " + p.nome;
-            document.getElementById('btn-acao').innerText = "Salvar Alterações";
-            document.getElementById('btn-acao').style.background = "var(--accent)";
-            document.getElementById('btn-cancelar').style.display = "block";
-
-            // Preenche campos
             document.getElementById('nome').value = p.nome;
             document.getElementById('preco').value = p.preco;
             document.getElementById('estoque').value = p.estoque;
-            document.getElementById('desc').value = p.descricao;
             document.getElementById('img-url').value = p.imagem;
-            
-            window.verPrevia();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+            document.getElementById('entrega').value = p.entrega;
+            document.getElementById('desc').value = p.descricao;
+            document.getElementById('btn-acao').innerText = "Salvar Alterações";
+            document.getElementById('btn-cancel').style.display = "block";
+            window.scrollTo(0,0);
+        }
 
-        window.cancelarEdicao = () => {
-            idEdicao = null;
-            document.getElementById('form-title').innerText = "Adicionar Novo Produto";
-            document.getElementById('btn-acao').innerText = "Publicar Produto";
-            document.getElementById('btn-acao').style.background = "var(--primary)";
-            document.getElementById('btn-cancelar').style.display = "none";
-            
-            // Limpa campos
-            document.getElementById('nome').value = "";
-            document.getElementById('preco').value = "";
-            document.getElementById('estoque').value = "";
-            document.getElementById('desc').value = "";
-            document.getElementById('img-url').value = "";
-            window.verPrevia();
-        };
-
-        // Escuta o banco de dados
-        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
-            produtosLocal = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            window.renderLista();
-        });
-
-        // Renderiza a lista com filtro de busca
-        window.renderLista = () => {
-            const busca = document.getElementById('input-busca-admin').value.toLowerCase();
-            const div = document.getElementById('lista-admin');
-            div.innerHTML = "";
-
-            const filtrados = produtosLocal.filter(p => p.nome.toLowerCase().includes(busca));
-
-            filtrados.forEach(p => {
-                div.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #333; background:rgba(0,0,0,0.2); margin-bottom:8px; border-radius:8px">
-                        <div style="display:flex; align-items:center; gap:12px">
-                            <img src="${p.imagem}" style="width:45px; height:45px; object-fit:cover; border-radius:6px">
-                            <div>
-                                <strong>${p.nome}</strong><br>
-                                <small style="color:var(--accent)">R$ ${p.preco} | Estoque: ${p.estoque}</small>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:5px">
-                            <button onclick="prepararEdicao('${p.id}')" class="btn-edit">Editar</button>
-                            <button onclick="deletar('${p.id}')" style="width:auto; padding:5px 10px; background:red; font-size:12px">Excluir</button>
-                        </div>
-                    </div>`;
-            });
-        };
-
-        window.deletar = async (id) => {
-            if(confirm("Tem certeza que deseja remover este item permanentemente?")) {
-                await deleteDoc(doc(db, "produtos", id));
-            }
-        };
+        window.apagar = async (id) => { if(confirm("Apagar?")) await deleteDoc(doc(db, "produtos", id)); }
     </script>
 </body>
 </html>
