@@ -6,55 +6,55 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .preview-img { width: 100%; max-height: 200px; object-fit: contain; background: #000; border-radius: 8px; margin-top: 10px; display: none; }
-        .btn-edit { background: #f59e0b !important; width: auto; padding: 5px 10px; font-size: 12px; border:none; cursor:pointer; }
+        .btn-edit { background: #f59e0b !important; width: auto; padding: 5px 10px; font-size: 12px; border:none; color:white; border-radius:4px; cursor:pointer; }
+        .btn-del { background: #ef4444 !important; width: auto; padding: 5px 10px; font-size: 12px; border:none; color:white; border-radius:4px; cursor:pointer; }
         .search-admin-container { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; }
     </style>
 </head>
 <body>
     <nav>
-        <a href="index.html">⬅ Voltar para Loja</a>
-        <span style="color:var(--accent)">Gerenciamento de Estoque</span>
+        <a href="index.html" style="color:white; text-decoration:none;">⬅ Voltar</a>
+        <span style="color:var(--accent); font-weight:bold;">Painel de Gestão</span>
     </nav>
 
     <div class="container">
         <div class="card" id="form-topo">
-            <h3 id="form-title">Adicionar Novo Produto</h3>
+            <h3 id="form-title">Cadastrar Novo Produto</h3>
             
-            <label>1. Link da Imagem</label>
-            <input type="url" id="img-url" placeholder="Link do ImgBB" oninput="verPrevia()">
+            <label>Link da Imagem</label>
+            <input type="text" id="campo-imagem" placeholder="Link do ImgBB" oninput="document.getElementById('img-preview').src=this.value; document.getElementById('img-preview').style.display='block'">
             <img id="img-preview" class="preview-img">
             
-            <label style="margin-top:15px; display:block">2. Nome do Produto</label>
-            <input type="text" id="nome" placeholder="Ex: Headset Gamer Pro">
+            <label>Nome do Produto</label>
+            <input type="text" id="campo-nome" placeholder="Ex: Mouse Gamer Pro">
             
-            <div style="display:flex; gap:15px">
+            <div style="display:flex; gap:10px">
                 <div style="flex:1">
-                    <label>3. Preço (R$)</label>
-                    <input type="number" id="preco" placeholder="0.00">
+                    <label>Preço (R$)</label>
+                    <input type="text" id="campo-preco" placeholder="59.90">
                 </div>
                 <div style="flex:1">
-                    <label>4. Estoque</label>
-                    <input type="number" id="estoque" placeholder="Qtd">
+                    <label>Estoque</label>
+                    <input type="text" id="campo-estoque" placeholder="10">
                 </div>
             </div>
 
-            <label style="margin-top:15px; display:block; color:var(--accent)">5. Conteúdo para Entrega (Link ou Chave)</label>
-            <textarea id="entrega" placeholder="O que o cliente recebe após pagar?" rows="2"></textarea>
+            <label style="color:var(--accent)">Entrega Digital (Link ou Chave)</label>
+            <textarea id="campo-entrega" placeholder="O que o cliente recebe após o pagamento?" rows="2"></textarea>
 
-            <label style="margin-top:15px; display:block">6. Descrição na Loja</label>
-            <textarea id="desc" placeholder="Descreva o produto..." rows="3"></textarea>
+            <label>Descrição</label>
+            <textarea id="campo-desc" placeholder="Detalhes do produto..." rows="3"></textarea>
             
-            <button id="btn-acao" onclick="processarAcao()">Publicar Produto</button>
-            <button id="btn-cancelar" style="display:none; background:#64748b; margin-top:5px" onclick="cancelarEdicao()">Cancelar Edição</button>
+            <button id="btn-acao" onclick="executar()">Publicar Produto</button>
+            <button id="btn-cancel" style="display:none; background:#475569; margin-top:5px" onclick="limpar()">Cancelar Edição</button>
         </div>
 
-        <div class="search-admin-container" style="margin-top:30px">
-            <label>🔍 Buscar no inventário</label>
-            <input type="text" id="input-busca-admin" placeholder="Digite o nome..." onkeyup="renderLista()">
+        <div class="search-admin-container" style="margin-top:40px">
+            <input type="text" id="busca-admin" placeholder="🔍 Buscar produto no seu estoque..." onkeyup="renderizar()">
         </div>
 
-        <h3>Itens no Inventário</h3>
-        <div id="lista-admin">Carregando...</div>
+        <div id="lista-admin">Carregando itens...</div>
     </div>
 
     <script type="module">
@@ -62,99 +62,98 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
         import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        let idEdicao = null;
-        let produtosLocal = [];
+        let idAtual = null;
+        let produtos = [];
 
         onAuthStateChanged(auth, (user) => {
-            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "index.html";
+            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "login.html";
         });
 
-        window.verPrevia = () => {
-            const url = document.getElementById('img-url').value;
-            const img = document.getElementById('img-preview');
-            if(url) { img.src = url; img.style.display = 'block'; }
-            else { img.style.display = 'none'; }
-        };
+        window.executar = async () => {
+            const btn = document.getElementById('btn-acao');
+            btn.disabled = true;
+            btn.innerText = "Processando...";
 
-        window.processarAcao = async () => {
             const dados = {
-                nome: document.getElementById('nome').value,
-                preco: document.getElementById('preco').value,
-                estoque: parseInt(document.getElementById('estoque').value) || 0,
-                entrega: document.getElementById('entrega').value,
-                descricao: document.getElementById('desc').value,
-                imagem: document.getElementById('img-url').value,
+                nome: document.getElementById('campo-nome').value,
+                preco: document.getElementById('campo-preco').value,
+                estoque: parseInt(document.getElementById('campo-estoque').value) || 0,
+                entrega: document.getElementById('campo-entrega').value,
+                descricao: document.getElementById('campo-desc').value,
+                imagem: document.getElementById('campo-imagem').value,
                 atualizadoEm: new Date()
             };
 
-            if(!dados.nome || !dados.preco || !dados.imagem) return alert("Preencha os campos obrigatórios!");
-
             try {
-                if(idEdicao) {
-                    await updateDoc(doc(db, "produtos", idEdicao), dados);
-                    alert("Atualizado!");
+                if(idAtual) {
+                    await updateDoc(doc(db, "produtos", idAtual), dados);
+                    alert("Produto atualizado!");
                 } else {
                     dados.criadoEm = new Date();
                     await addDoc(collection(db, "produtos"), dados);
-                    alert("Publicado!");
+                    alert("Produto cadastrado!");
                 }
-                cancelarEdicao();
-            } catch(e) { alert("Erro: " + e.message); }
+                limpar();
+            } catch(e) { alert("Erro ao salvar: " + e.message); }
+            finally { 
+                btn.disabled = false; 
+                btn.innerText = idAtual ? "Salvar Alterações" : "Publicar Produto";
+            }
         };
 
         window.prepararEdicao = (id) => {
-            const p = produtosLocal.find(item => item.id === id);
+            const p = produtos.find(item => item.id === id);
             if(!p) return;
-            idEdicao = id;
+            idAtual = id;
             document.getElementById('form-title').innerText = "Editando: " + p.nome;
-            document.getElementById('nome').value = p.nome;
-            document.getElementById('preco').value = p.preco;
-            document.getElementById('estoque').value = p.estoque;
-            document.getElementById('entrega').value = p.entrega || "";
-            document.getElementById('desc').value = p.descricao;
-            document.getElementById('img-url').value = p.imagem;
+            document.getElementById('campo-nome').value = p.nome || "";
+            document.getElementById('campo-preco').value = p.preco || "";
+            document.getElementById('campo-estoque').value = p.estoque || 0;
+            document.getElementById('campo-entrega').value = p.entrega || "";
+            document.getElementById('campo-desc').value = p.descricao || "";
+            document.getElementById('campo-imagem').value = p.imagem || "";
             document.getElementById('btn-acao').innerText = "Salvar Alterações";
-            document.getElementById('btn-cancelar').style.display = "block";
-            window.verPrevia();
-            window.scrollTo(0,0);
+            document.getElementById('btn-cancel').style.display = "block";
+            document.getElementById('img-preview').src = p.imagem;
+            document.getElementById('img-preview').style.display = 'block';
+            window.scrollTo({top: 0, behavior: 'smooth'});
         };
 
-        window.cancelarEdicao = () => {
-            idEdicao = null;
-            document.getElementById('form-title').innerText = "Adicionar Novo Produto";
+        window.limpar = () => {
+            idAtual = null;
+            document.getElementById('form-title').innerText = "Cadastrar Novo Produto";
             document.getElementById('btn-acao').innerText = "Publicar Produto";
-            document.getElementById('btn-cancelar').style.display = "none";
-            document.getElementById('nome').value = "";
-            document.getElementById('preco').value = "";
-            document.getElementById('estoque').value = "";
-            document.getElementById('entrega').value = "";
-            document.getElementById('desc').value = "";
-            document.getElementById('img-url').value = "";
-            window.verPrevia();
+            document.getElementById('btn-cancel').style.display = "none";
+            document.querySelectorAll('input, textarea').forEach(i => i.value = "");
+            document.getElementById('img-preview').style.display = 'none';
         };
 
         onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
-            produtosLocal = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderLista();
+            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderizar();
         });
 
-        window.renderLista = () => {
-            const busca = document.getElementById('input-busca-admin').value.toLowerCase();
+        window.renderizar = () => {
+            const busca = document.getElementById('busca-admin').value.toLowerCase();
             const div = document.getElementById('lista-admin');
             div.innerHTML = "";
-            produtosLocal.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
+            
+            produtos.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
                 div.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333; background:rgba(255,255,255,0.02); margin-bottom:5px; border-radius:8px">
-                        <span>${p.nome} (R$ ${p.preco})</span>
-                        <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.05); margin-bottom:10px; border-radius:10px; border:1px solid #333">
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <img src="${p.imagem}" style="width:40px; height:40px; border-radius:5px; object-fit:cover">
+                            <div><strong>${p.nome}</strong><br><small>R$ ${p.preco} | Est: ${p.estoque}</small></div>
+                        </div>
+                        <div style="display:flex; gap:8px">
                             <button onclick="prepararEdicao('${p.id}')" class="btn-edit">Editar</button>
-                            <button onclick="deletar('${p.id}')" style="background:red; padding:5px 10px; border:none; cursor:pointer">X</button>
+                            <button onclick="deletar('${p.id}')" class="btn-del">X</button>
                         </div>
                     </div>`;
             });
         };
 
-        window.deletar = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "produtos", id)); };
+        window.deletar = async (id) => { if(confirm("Deseja mesmo excluir?")) await deleteDoc(doc(db, "produtos", id)); };
     </script>
 </body>
 </html>
