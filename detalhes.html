@@ -19,7 +19,7 @@
         .pix-code-text { background: #000; padding: 10px; border-radius: 5px; font-size: 0.7rem; word-break: break-all; margin-bottom: 15px; border: 1px solid #333; }
         .load-spin { border: 3px solid #333; border-top: 3px solid #6366f1; border-radius: 50%; width: 25px; height: 25px; animation: spin 1s linear infinite; margin: 10px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .input-email { width: 100%; padding: 12px; margin-top: 8px; background: #1f2937; border: 1px solid #374151; color: white; border-radius: 8px; }
+        .input-email { width: 100%; padding: 12px; margin-top: 8px; background: #1f2937; border: 1px solid #374151; color: white; border-radius: 8px; box-sizing: border-box;}
     </style>
 </head>
 <body>
@@ -31,7 +31,7 @@
             <div id="area-qrcode"></div>
             <p style="font-size: 0.8rem">Escaneie o QR Code ou copie abaixo:</p>
             <div class="pix-code-text" id="texto-pix">Gerando...</div>
-            <button onclick="copiarPixChave()" style="background:#6366f1; width: 100%; margin-bottom: 10px;">Copiar Código</button>
+            <button onclick="copiarPixChave()" style="background:#6366f1; width: 100%; margin-bottom: 10px; cursor: pointer;">Copiar Código</button>
             <div class="load-spin"></div>
             <p style="font-size: 0.7rem; color: #9ca3af;">Aguardando confirmação do pagamento...</p>
         </div>
@@ -41,9 +41,8 @@
         <div id="info-p" class="card" style="text-align: center; margin-bottom: 20px;"></div>
         
         <div class="card" style="margin-bottom: 20px;">
-            <label style="font-size: 0.9rem;">E-mail para entrega:</label>
+            <label style="font-size: 0.9rem;">E-mail para receber o produto:</label>
             <input type="email" id="email-entrega" class="input-email" placeholder="seu@email.com">
-            <p style="font-size: 0.7rem; color: #9ca3af; margin-top: 5px;">* O PIX só será gerado com um e-mail válido.</p>
         </div>
 
         <div id="container-mp-brick"></div>
@@ -73,16 +72,24 @@
 
         const montarCheckout = async () => {
             await bricks.create('payment', 'container-mp-brick', {
-                initialization: { amount: parseFloat(prodDados.preco) },
+                initialization: { 
+                    amount: parseFloat(prodDados.preco),
+                    payer: { email: "test@test.com" }
+                },
                 customization: {
-                    paymentMethods: { pix: 'all', creditCard: 'none', ticket: 'none', bankTransfer: 'none' },
+                    paymentMethods: { pix: 'all', creditCard: 'none' },
                     visual: { theme: 'dark' }
                 },
                 callbacks: {
+                    onReady: () => { console.log("Formulário carregado"); },
+                    onError: (error) => { console.error("Erro no formulário:", error); },
                     onSubmit: ({ formData }) => {
-                        const email = document.getElementById('email-entrega').value;
-                        if(!email || !email.includes('@')) return alert("Digite um e-mail válido!");
-                        formData.payer.email = email;
+                        const emailDigitado = document.getElementById('email-entrega').value;
+                        if(!emailDigitado || !emailDigitado.includes('@')) {
+                            alert("Por favor, digite um e-mail válido antes de pagar.");
+                            return;
+                        }
+                        formData.payer.email = emailDigitado;
                         return new Promise((resolve, reject) => {
                             chamadaPagamento(formData).then(resolve).catch(reject);
                         });
@@ -110,13 +117,15 @@
                     abrirModalPix(final);
                 }
             } else {
-                alert("Erro ao gerar PIX. Verifique se o e-mail está correto.");
+                alert("Erro ao gerar PIX. Verifique se sua conta do Mercado Pago aceita PIX.");
             }
         }
 
         function abrirModalPix(dados) {
-            document.getElementById('area-qrcode').innerHTML = `<img src="data:image/png;base64,${dados.point_of_interaction.transaction_data.qr_code_base64}" class="qr-img">`;
-            document.getElementById('texto-pix').innerText = dados.point_of_interaction.transaction_data.qr_code;
+            const qrImg = dados.point_of_interaction.transaction_data.qr_code_base64;
+            const qrText = dados.point_of_interaction.transaction_data.qr_code;
+            document.getElementById('area-qrcode').innerHTML = `<img src="data:image/png;base64,${qrImg}" class="qr-img">`;
+            document.getElementById('texto-pix').innerText = qrText;
             document.getElementById('modal-pix-entrega').style.display = 'flex';
             loopStatus(dados.id);
         }
@@ -135,8 +144,8 @@
         }
 
         window.copiarPixChave = () => {
-            navigator.clipboard.writeText(document.getElementById('texto-pix').innerText);
-            alert("Copiado!");
+            const t = document.getElementById('texto-pix').innerText;
+            navigator.clipboard.writeText(t).then(() => alert("Copiado!"));
         };
 
         iniciar();
