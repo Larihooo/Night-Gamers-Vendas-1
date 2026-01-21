@@ -4,103 +4,157 @@
     <meta charset="UTF-8">
     <title>Painel Admin - Night Gamers</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .preview-img { width: 100%; max-height: 200px; object-fit: contain; background: #000; border-radius: 8px; margin-top: 10px; display: none; }
+        .btn-edit { background: #f59e0b !important; width: auto; padding: 5px 10px; font-size: 12px; border:none; cursor:pointer; }
+        .search-admin-container { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
+    </style>
 </head>
 <body>
     <nav>
-        <a href="index.html">⬅ Voltar</a>
-        <span>Gerenciar Inventário</span>
+        <a href="index.html">⬅ Voltar para Loja</a>
+        <span style="color:var(--accent)">Gerenciamento de Estoque</span>
     </nav>
 
     <div class="container">
         <div class="card" id="form-topo">
-            <h3 id="form-title">Novo Produto</h3>
-            <input type="text" id="nome" placeholder="Nome do Produto">
-            <input type="url" id="img-url" placeholder="Link da Imagem (ImgBB)" oninput="document.getElementById('previa').src=this.value; document.getElementById('previa').style.display='block'">
-            <img id="previa" style="width:100%; max-height:150px; object-fit:contain; display:none; margin:10px 0">
+            <h3 id="form-title">Adicionar Novo Produto</h3>
             
-            <div style="display:flex; gap:10px">
-                <input type="number" id="preco" placeholder="Preço R$">
-                <input type="number" id="estoque" placeholder="Qtd Estoque">
+            <label>1. Link da Imagem</label>
+            <input type="url" id="img-url" placeholder="Link do ImgBB" oninput="verPrevia()">
+            <img id="img-preview" class="preview-img">
+            
+            <label style="margin-top:15px; display:block">2. Nome do Produto</label>
+            <input type="text" id="nome" placeholder="Ex: Headset Gamer Pro">
+            
+            <div style="display:flex; gap:15px">
+                <div style="flex:1">
+                    <label>3. Preço (R$)</label>
+                    <input type="number" id="preco" placeholder="0.00">
+                </div>
+                <div style="flex:1">
+                    <label>4. Estoque</label>
+                    <input type="number" id="estoque" placeholder="Qtd">
+                </div>
             </div>
 
-            <label style="color:var(--accent); font-size:12px">CONTEÚDO PARA ENTREGA (LINK OU CHAVE):</label>
+            <label style="margin-top:15px; display:block; color:var(--accent)">5. Conteúdo para Entrega (Link ou Chave)</label>
             <textarea id="entrega" placeholder="O que o cliente recebe após pagar?" rows="2"></textarea>
+
+            <label style="margin-top:15px; display:block">6. Descrição na Loja</label>
+            <textarea id="desc" placeholder="Descreva o produto..." rows="3"></textarea>
             
-            <textarea id="desc" placeholder="Descrição na loja..." rows="2"></textarea>
-            
-            <button id="btn-acao" onclick="salvar()">Publicar Produto</button>
-            <button id="btn-cancel" onclick="location.reload()" style="display:none; background:#666">Cancelar</button>
+            <button id="btn-acao" onclick="processarAcao()">Publicar Produto</button>
+            <button id="btn-cancelar" style="display:none; background:#64748b; margin-top:5px" onclick="cancelarEdicao()">Cancelar Edição</button>
         </div>
 
-        <input type="text" id="busca" placeholder="🔍 Procurar no meu estoque..." onkeyup="listar()" style="margin-top:30px">
-        <div id="lista-admin"></div>
+        <div class="search-admin-container" style="margin-top:30px">
+            <label>🔍 Buscar no inventário</label>
+            <input type="text" id="input-busca-admin" placeholder="Digite o nome..." onkeyup="renderLista()">
+        </div>
+
+        <h3>Itens no Inventário</h3>
+        <div id="lista-admin">Carregando...</div>
     </div>
 
     <script type="module">
         import { db, auth, ADMIN_EMAIL } from './firebase.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
         import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
         let idEdicao = null;
-        let produtos = [];
+        let produtosLocal = [];
 
-        window.salvar = async () => {
+        onAuthStateChanged(auth, (user) => {
+            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "index.html";
+        });
+
+        window.verPrevia = () => {
+            const url = document.getElementById('img-url').value;
+            const img = document.getElementById('img-preview');
+            if(url) { img.src = url; img.style.display = 'block'; }
+            else { img.style.display = 'none'; }
+        };
+
+        window.processarAcao = async () => {
             const dados = {
                 nome: document.getElementById('nome').value,
                 preco: document.getElementById('preco').value,
-                estoque: parseInt(document.getElementById('estoque').value),
-                imagem: document.getElementById('img-url').value,
+                estoque: parseInt(document.getElementById('estoque').value) || 0,
                 entrega: document.getElementById('entrega').value,
                 descricao: document.getElementById('desc').value,
+                imagem: document.getElementById('img-url').value,
                 atualizadoEm: new Date()
             };
 
-            if(idEdicao) {
-                await updateDoc(doc(db, "produtos", idEdicao), dados);
-                alert("Atualizado!");
-            } else {
-                dados.criadoEm = new Date();
-                await addDoc(collection(db, "produtos"), dados);
-                alert("Criado!");
-            }
-            location.reload();
-        }
+            if(!dados.nome || !dados.preco || !dados.imagem) return alert("Preencha os campos obrigatórios!");
 
-        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
-            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            listar();
-        });
+            try {
+                if(idEdicao) {
+                    await updateDoc(doc(db, "produtos", idEdicao), dados);
+                    alert("Atualizado!");
+                } else {
+                    dados.criadoEm = new Date();
+                    await addDoc(collection(db, "produtos"), dados);
+                    alert("Publicado!");
+                }
+                cancelarEdicao();
+            } catch(e) { alert("Erro: " + e.message); }
+        };
 
-        window.listar = () => {
-            const termo = document.getElementById('busca').value.toLowerCase();
-            const div = document.getElementById('lista-admin');
-            div.innerHTML = "";
-            produtos.filter(p => p.nome.toLowerCase().includes(termo)).forEach(p => {
-                div.innerHTML += `
-                <div class="card" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding:10px">
-                    <span>${p.nome} (Qtd: ${p.estoque})</span>
-                    <div>
-                        <button onclick="editar('${p.id}')" style="width:auto; background:orange; padding:5px">Editar</button>
-                        <button onclick="apagar('${p.id}')" style="width:auto; background:red; padding:5px">X</button>
-                    </div>
-                </div>`;
-            });
-        }
-
-        window.editar = (id) => {
-            const p = produtos.find(x => x.id === id);
+        window.prepararEdicao = (id) => {
+            const p = produtosLocal.find(item => item.id === id);
+            if(!p) return;
             idEdicao = id;
+            document.getElementById('form-title').innerText = "Editando: " + p.nome;
             document.getElementById('nome').value = p.nome;
             document.getElementById('preco').value = p.preco;
             document.getElementById('estoque').value = p.estoque;
-            document.getElementById('img-url').value = p.imagem;
-            document.getElementById('entrega').value = p.entrega;
+            document.getElementById('entrega').value = p.entrega || "";
             document.getElementById('desc').value = p.descricao;
+            document.getElementById('img-url').value = p.imagem;
             document.getElementById('btn-acao').innerText = "Salvar Alterações";
-            document.getElementById('btn-cancel').style.display = "block";
+            document.getElementById('btn-cancelar').style.display = "block";
+            window.verPrevia();
             window.scrollTo(0,0);
-        }
+        };
 
-        window.apagar = async (id) => { if(confirm("Apagar?")) await deleteDoc(doc(db, "produtos", id)); }
+        window.cancelarEdicao = () => {
+            idEdicao = null;
+            document.getElementById('form-title').innerText = "Adicionar Novo Produto";
+            document.getElementById('btn-acao').innerText = "Publicar Produto";
+            document.getElementById('btn-cancelar').style.display = "none";
+            document.getElementById('nome').value = "";
+            document.getElementById('preco').value = "";
+            document.getElementById('estoque').value = "";
+            document.getElementById('entrega').value = "";
+            document.getElementById('desc').value = "";
+            document.getElementById('img-url').value = "";
+            window.verPrevia();
+        };
+
+        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
+            produtosLocal = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            renderLista();
+        });
+
+        window.renderLista = () => {
+            const busca = document.getElementById('input-busca-admin').value.toLowerCase();
+            const div = document.getElementById('lista-admin');
+            div.innerHTML = "";
+            produtosLocal.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
+                div.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333; background:rgba(255,255,255,0.02); margin-bottom:5px; border-radius:8px">
+                        <span>${p.nome} (R$ ${p.preco})</span>
+                        <div>
+                            <button onclick="prepararEdicao('${p.id}')" class="btn-edit">Editar</button>
+                            <button onclick="deletar('${p.id}')" style="background:red; padding:5px 10px; border:none; cursor:pointer">X</button>
+                        </div>
+                    </div>`;
+            });
+        };
+
+        window.deletar = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "produtos", id)); };
     </script>
 </body>
 </html>
