@@ -3,56 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Satus Store | Dashboard</title>
+    <title>Night Gamers | Loja</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <div id="auth-container" class="glass-card">
-        <h2 id="auth-title">Bem-vindo</h2>
-        <input type="email" id="email" placeholder="E-mail">
-        <input type="password" id="pass" placeholder="Senha">
+        <h2 id="auth-title">Night Gamers Login</h2>
+        <input type="email" id="email" placeholder="Seu E-mail">
+        <input type="password" id="pass" placeholder="Sua Senha">
         <button onclick="authAction()" id="btn-auth">Entrar</button>
-        <p onclick="toggleAuth()" style="text-align:center; margin-top:15px; cursor:pointer; font-size:14px">
-            Não tem uma conta? <span style="color:var(--primary)">Cadastre-se</span>
+        <p style="text-align:center; margin-top:15px; font-size:14px; color:#ccc">
+            <span onclick="toggleAuth()" style="cursor:pointer; text-decoration:underline">Criar uma conta nova</span>
         </p>
     </div>
 
-    <div id="app-container" class="glass-card" style="display:none;">
-        <header style="display:flex; justify-content: space-between; align-items: center;">
+    <div id="app-container" class="glass-card hidden">
+        <header style="display:flex; justify-content: space-between; align-items: center; margin-bottom:20px">
             <div>
-                <span id="user-email-tag" style="font-weight:600"></span>
+                <small style="color:#aaa">Logado como:</small><br>
+                <span id="user-email-tag" style="font-weight:600; color:white"></span>
                 <div id="admin-indicator"></div>
             </div>
-            <button onclick="logout()" style="width:auto; padding:8px 15px; background:rgba(239, 68, 68, 0.2); color:#ef4444">Sair</button>
+            <button onclick="logout()" style="width:auto; padding:8px 15px; background:rgba(239, 68, 68, 0.2); color:#ef4444; border:1px solid #ef4444">Sair</button>
         </header>
 
-        <details style="margin-top:20px; font-size:14px; color:#94a3b8">
-            <summary style="cursor:pointer">Configurações de Conta (Senha/E-mail)</summary>
-            <div style="padding-top:10px">
-                <input type="password" id="new-pass" placeholder="Nova Senha">
-                <button onclick="changePassword()" style="font-size:12px; padding:8px">Atualizar Senha</button>
+        <details style="margin-bottom:20px; color:#94a3b8; font-size:14px">
+            <summary style="cursor:pointer">Alterar Senha</summary>
+            <div style="margin-top:10px">
+                <input type="password" id="new-pass" placeholder="Nova senha">
+                <button onclick="changePassword()" style="padding:8px">Salvar Nova Senha</button>
             </div>
         </details>
 
-        <div id="admin-panel" style="display:none; border-top: 1px solid var(--glass-border); margin-top:20px; padding-top:20px;">
-            <h3 style="color:var(--accent)">Gerenciar Inventário</h3>
+        <div id="admin-panel" class="hidden" style="border-top:1px solid var(--glass-border); padding-top:20px; margin-bottom:20px">
+            <h3 style="color:#10b981">Adicionar Novo Produto</h3>
             <input type="text" id="p-name" placeholder="Nome do Produto">
-            <input type="text" id="p-price" placeholder="Preço (Ex: R$ 99,90)">
-            <button onclick="addProduct()" style="background:var(--accent)">Adicionar ao Site</button>
+            <input type="text" id="p-price" placeholder="Preço (ex: 120,00)">
+            <textarea id="p-desc" placeholder="Descrição detalhada do produto (ficha técnica, estado, etc)..." rows="3"></textarea>
+            <button onclick="addProduct()" style="background:#10b981; margin-top:10px">Publicar Produto</button>
         </div>
 
-        <div style="margin-top:30px">
-            <h3>Produtos</h3>
-            <input type="text" id="search" placeholder="🔍 Pesquisar no estoque..." onkeyup="render()">
-            <div id="product-list" class="product-grid"></div>
-        </div>
+        <hr style="border:0; border-top:1px solid var(--glass-border); margin:20px 0">
+
+        <input type="text" id="search" placeholder="🔍 Pesquisar na loja..." onkeyup="renderizarLista()">
+        <div id="product-list" class="product-grid"></div>
     </div>
 
-    <footer>
-        &copy; 2024 Elias Santos. Todos os direitos reservados. <br>
-        <small>Sistema de Gerenciamento de Identidade e Dados.</small>
-    </footer>
+    <div id="product-page" class="modal-overlay hidden">
+        <div class="product-detail-card glass-card">
+            <button onclick="fecharProduto()" class="btn-close">✕</button>
+            <div id="detail-content">
+                </div>
+        </div>
+    </div>
 
     <script type="module" src="script.js"></script>
 </body>
