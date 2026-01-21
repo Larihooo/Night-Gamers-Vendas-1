@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Detalhes do Produto</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <a href="index.html">⬅ Voltar para Loja</a>
+    </nav>
+
+    <div class="container">
+        <div class="card" id="detail-box">
+            <h2>Carregando detalhes...</h2>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db } from './firebase.js';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        // Pega o ID da URL
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+
+        async function carregar() {
+            if(!id) return window.location.href = "index.html";
+            
+            const docSnap = await getDoc(doc(db, "produtos", id));
+            if (docSnap.exists()) {
+                const p = docSnap.data();
+                const zap = `5511999999999`; // SEU NUMERO AQUI
+                const text = `Olá, tenho interesse em *${p.nome}* por R$ ${p.preco}.`;
+
+                document.getElementById('detail-box').innerHTML = `
+                    <h1 style="color:var(--primary)">${p.nome}</h1>
+                    <h2 style="color:var(--accent)">R$ ${p.preco}</h2>
+                    <hr style="border-color:var(--border); margin:20px 0">
+                    <p style="line-height:1.6; color:#ccc">${p.descricao.replace(/\n/g, '<br>')}</p>
+                    <br>
+                    <a href="https://wa.me/${zap}?text=${encodeURIComponent(text)}" target="_blank">
+                        <button style="background:#25d366">Comprar no WhatsApp 💬</button>
+                    </a>
+                `;
+            } else {
+                alert("Produto não encontrado!");
+                window.location.href = "index.html";
+            }
+        }
+        carregar();
+    </script>
+</body>
+</html>

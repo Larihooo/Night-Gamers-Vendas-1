@@ -2,62 +2,62 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Night Gamers | Loja</title>
+    <title>Night Gamers | Início</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-    <div id="auth-container" class="glass-card">
-        <h2 id="auth-title">Night Gamers Login</h2>
-        <input type="email" id="email" placeholder="Seu E-mail">
-        <input type="password" id="pass" placeholder="Sua Senha">
-        <button onclick="authAction()" id="btn-auth">Entrar</button>
-        <p style="text-align:center; margin-top:15px; font-size:14px; color:#ccc">
-            <span onclick="toggleAuth()" style="cursor:pointer; text-decoration:underline">Criar uma conta nova</span>
-        </p>
-    </div>
-
-    <div id="app-container" class="glass-card hidden">
-        <header style="display:flex; justify-content: space-between; align-items: center; margin-bottom:20px">
-            <div>
-                <small style="color:#aaa">Logado como:</small><br>
-                <span id="user-email-tag" style="font-weight:600; color:white"></span>
-                <div id="admin-indicator"></div>
+    <nav>
+        <div style="font-weight:bold; font-size:1.2rem">Night Gamers 🎮</div>
+        <div id="nav-links">
             </div>
-            <button onclick="logout()" style="width:auto; padding:8px 15px; background:rgba(239, 68, 68, 0.2); color:#ef4444; border:1px solid #ef4444">Sair</button>
-        </header>
+    </nav>
 
-        <details style="margin-bottom:20px; color:#94a3b8; font-size:14px">
-            <summary style="cursor:pointer">Alterar Senha</summary>
-            <div style="margin-top:10px">
-                <input type="password" id="new-pass" placeholder="Nova senha">
-                <button onclick="changePassword()" style="padding:8px">Salvar Nova Senha</button>
-            </div>
-        </details>
-
-        <div id="admin-panel" class="hidden" style="border-top:1px solid var(--glass-border); padding-top:20px; margin-bottom:20px">
-            <h3 style="color:#10b981">Adicionar Novo Produto</h3>
-            <input type="text" id="p-name" placeholder="Nome do Produto">
-            <input type="text" id="p-price" placeholder="Preço (ex: 120,00)">
-            <textarea id="p-desc" placeholder="Descrição detalhada do produto (ficha técnica, estado, etc)..." rows="3"></textarea>
-            <button onclick="addProduct()" style="background:#10b981; margin-top:10px">Publicar Produto</button>
-        </div>
-
-        <hr style="border:0; border-top:1px solid var(--glass-border); margin:20px 0">
-
-        <input type="text" id="search" placeholder="🔍 Pesquisar na loja..." onkeyup="renderizarLista()">
-        <div id="product-list" class="product-grid"></div>
+    <div class="container">
+        <h2>Catálogo Recente</h2>
+        <input type="text" id="search" placeholder="🔍 Buscar produto..." onkeyup="render()">
+        <div id="grid" class="product-grid">Carregando...</div>
     </div>
 
-    <div id="product-page" class="modal-overlay hidden">
-        <div class="product-detail-card glass-card">
-            <button onclick="fecharProduto()" class="btn-close">✕</button>
-            <div id="detail-content">
-                </div>
-        </div>
-    </div>
+    <script type="module">
+        import { db, auth, ADMIN_EMAIL } from './firebase.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-    <script type="module" src="script.js"></script>
+        let produtos = [];
+
+        // Verifica Login para montar o menu
+        onAuthStateChanged(auth, (user) => {
+            const nav = document.getElementById('nav-links');
+            if(user) {
+                let menu = `<a href="perfil.html">Minha Conta</a>`;
+                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent)">Painel Admin</a>`;
+                nav.innerHTML = menu;
+            } else {
+                nav.innerHTML = `<a href="login.html">Entrar / Cadastrar</a>`;
+            }
+        });
+
+        // Carrega Produtos
+        const q = query(collection(db, "produtos"), orderBy("criadoEm", "desc"));
+        onSnapshot(q, (snap) => {
+            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            window.render();
+        });
+
+        window.render = () => {
+            const busca = document.getElementById('search').value.toLowerCase();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = "";
+            
+            produtos.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
+                grid.innerHTML += `
+                <div class="product-card" onclick="window.location.href='detalhes.html?id=${p.id}'">
+                    <h3>${p.nome}</h3>
+                    <p style="color:var(--accent); font-weight:bold">R$ ${p.preco}</p>
+                    <small style="color:#aaa">Ver detalhes</small>
+                </div>`;
+            });
+        };
+    </script>
 </body>
 </html>

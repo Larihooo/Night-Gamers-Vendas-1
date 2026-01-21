@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Minha Conta</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav><a href="index.html">⬅ Voltar</a></nav>
+    <div class="container">
+        <div class="card">
+            <h2>Gerenciar Conta</h2>
+            <p>Logado como: <strong id="user-email">...</strong></p>
+            <hr style="border-color:var(--border)">
+            
+            <h4>Trocar Senha</h4>
+            <input type="password" id="nova-senha" placeholder="Nova Senha">
+            <button onclick="mudarSenha()">Atualizar Senha</button>
+            
+            <br><br>
+            <button onclick="sair()" style="background:red">Sair da Conta</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { auth } from './firebase.js';
+        import { signOut, updatePassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+        onAuthStateChanged(auth, (user) => {
+            if(user) document.getElementById('user-email').innerText = user.email;
+            else window.location.href = "login.html";
+        });
+
+        window.mudarSenha = () => {
+            const senha = document.getElementById('nova-senha').value;
+            if(senha.length >= 6) {
+                updatePassword(auth.currentUser, senha).then(() => alert("Senha alterada!"));
+            } else alert("Mínimo 6 caracteres");
+        };
+
+        window.sair = () => {
+            signOut(auth).then(() => window.location.href = "index.html");
+        };
+    </script>
+</body>
+</html>

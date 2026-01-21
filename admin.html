@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Administração</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <nav>
+        <a href="index.html">⬅ Voltar</a>
+        <span>Modo Administrador</span>
+    </nav>
+
+    <div class="container">
+        <div class="card">
+            <h3>Adicionar Novo Produto</h3>
+            <input type="text" id="nome" placeholder="Nome">
+            <input type="text" id="preco" placeholder="Preço">
+            <textarea id="desc" placeholder="Descrição completa" rows="5"></textarea>
+            <button onclick="adicionar()">Publicar</button>
+        </div>
+
+        <h3>Gerenciar Estoque</h3>
+        <div id="lista-admin"></div>
+    </div>
+
+    <script type="module">
+        import { db, auth, ADMIN_EMAIL } from './firebase.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        // Segurança: Expulsa se não for Admin
+        onAuthStateChanged(auth, (user) => {
+            if(!user || user.email !== ADMIN_EMAIL) {
+                alert("Acesso Negado.");
+                window.location.href = "index.html";
+            }
+        });
+
+        // Adicionar
+        window.adicionar = async () => {
+            const nome = document.getElementById('nome').value;
+            const preco = document.getElementById('preco').value;
+            const desc = document.getElementById('desc').value;
+
+            if(nome && preco) {
+                await addDoc(collection(db, "produtos"), {
+                    nome, preco, descricao: desc, criadoEm: new Date()
+                });
+                alert("Produto Adicionado!");
+                document.getElementById('nome').value = "";
+                document.getElementById('preco').value = "";
+                document.getElementById('desc').value = "";
+            }
+        };
+
+        // Listar para Excluir
+        const q = query(collection(db, "produtos"), orderBy("criadoEm", "desc"));
+        onSnapshot(q, (snap) => {
+            const div = document.getElementById('lista-admin');
+            div.innerHTML = "";
+            snap.forEach(d => {
+                const p = d.data();
+                div.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333">
+                        <span>${p.nome}</span>
+                        <button onclick="deletar('${d.id}')" style="width:auto; padding:5px 10px; background:red">X</button>
+                    </div>
+                `;
+            });
+        });
+
+        window.deletar = async (id) => {
+            if(confirm("Apagar?")) await deleteDoc(doc(db, "produtos", id));
+        }
+    </script>
+</body>
+</html>
