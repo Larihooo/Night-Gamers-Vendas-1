@@ -2,17 +2,17 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Detalhes do Produto</title>
+    <title>Detalhes</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <nav>
-        <a href="index.html">⬅ Voltar para Loja</a>
+        <a href="index.html">⬅ Voltar</a>
     </nav>
 
     <div class="container">
         <div class="card" id="detail-box">
-            <h2>Carregando detalhes...</h2>
+            <h2>Carregando...</h2>
         </div>
     </div>
 
@@ -20,7 +20,6 @@
         import { db } from './firebase.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        // Pega o ID da URL
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
 
@@ -28,24 +27,41 @@
             if(!id) return window.location.href = "index.html";
             
             const docSnap = await getDoc(doc(db, "produtos", id));
+            
             if (docSnap.exists()) {
                 const p = docSnap.data();
-                const zap = `5511999999999`; // SEU NUMERO AQUI
-                const text = `Olá, tenho interesse em *${p.nome}* por R$ ${p.preco}.`;
+                const img = p.imagem || "https://via.placeholder.com/400x400?text=Sem+Foto";
+                
+                // Lógica de Estoque
+                const temEstoque = p.estoque > 0;
+                const classeEstoque = temEstoque ? "em-estoque" : "sem-estoque";
+                const textoEstoque = temEstoque ? `Em estoque: ${p.estoque} un.` : "PRODUTO ESGOTADO";
+                
+                // Botão do WhatsApp (Desativa se não tiver estoque)
+                const zap = "5511999999999"; // SEU NUMERO
+                const msg = `Olá! Tenho interesse no *${p.nome}* que vi no site por R$ ${p.preco}.`;
+                const linkZap = `https://wa.me/${zap}?text=${encodeURIComponent(msg)}`;
+                
+                const btnBotao = temEstoque 
+                    ? `<a href="${linkZap}" target="_blank"><button style="background:#25d366; margin-top:20px">Comprar no WhatsApp 💬</button></a>`
+                    : `<button disabled style="background:#555; cursor:not-allowed; margin-top:20px">Indisponível no momento</button>`;
 
                 document.getElementById('detail-box').innerHTML = `
-                    <h1 style="color:var(--primary)">${p.nome}</h1>
-                    <h2 style="color:var(--accent)">R$ ${p.preco}</h2>
-                    <hr style="border-color:var(--border); margin:20px 0">
-                    <p style="line-height:1.6; color:#ccc">${p.descricao.replace(/\n/g, '<br>')}</p>
-                    <br>
-                    <a href="https://wa.me/${zap}?text=${encodeURIComponent(text)}" target="_blank">
-                        <button style="background:#25d366">Comprar no WhatsApp 💬</button>
-                    </a>
+                    <div class="detail-layout">
+                        <img src="${img}" class="detail-img">
+                        
+                        <div class="detail-info">
+                            <span class="estoque-badge ${classeEstoque}">${textoEstoque}</span>
+                            <h1 style="color:var(--primary); margin:10px 0">${p.nome}</h1>
+                            <h2 style="color:var(--accent); font-size:2rem">R$ ${p.preco}</h2>
+                            <p style="margin-top:20px; line-height:1.6; color:#ccc">${p.descricao.replace(/\n/g, '<br>')}</p>
+                            
+                            ${btnBotao}
+                        </div>
+                    </div>
                 `;
             } else {
-                alert("Produto não encontrado!");
-                window.location.href = "index.html";
+                document.getElementById('detail-box').innerHTML = "<h2>Produto não encontrado!</h2>";
             }
         }
         carregar();

@@ -7,21 +7,32 @@
 </head>
 <body>
     <nav>
-        <a href="index.html">⬅ Voltar</a>
-        <span>Modo Administrador</span>
+        <a href="index.html">⬅ Voltar para Loja</a>
+        <span style="color:var(--accent)">Painel Admin</span>
     </nav>
 
     <div class="container">
         <div class="card">
             <h3>Adicionar Novo Produto</h3>
-            <input type="text" id="nome" placeholder="Nome">
-            <input type="text" id="preco" placeholder="Preço">
-            <textarea id="desc" placeholder="Descrição completa" rows="5"></textarea>
-            <button onclick="adicionar()">Publicar</button>
+            
+            <label>Link da Imagem (URL)</label>
+            <input type="url" id="img-url" placeholder="https://exemplo.com/foto.jpg">
+            
+            <label>Nome do Produto</label>
+            <input type="text" id="nome" placeholder="Ex: Headset Gamer">
+            
+            <div style="display:flex; gap:10px">
+                <input type="number" id="preco" placeholder="Preço (R$)" style="flex:1">
+                <input type="number" id="estoque" placeholder="Qtd. Estoque" style="flex:1">
+            </div>
+
+            <textarea id="desc" placeholder="Descrição completa do produto..." rows="4"></textarea>
+            
+            <button onclick="adicionar()">Publicar Produto</button>
         </div>
 
-        <h3>Gerenciar Estoque</h3>
-        <div id="lista-admin"></div>
+        <h3>Estoque Atual</h3>
+        <div id="lista-admin">Carregando...</div>
     </div>
 
     <script type="module">
@@ -29,7 +40,7 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
         import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        // Segurança: Expulsa se não for Admin
+        // Segurança
         onAuthStateChanged(auth, (user) => {
             if(!user || user.email !== ADMIN_EMAIL) {
                 alert("Acesso Negado.");
@@ -37,24 +48,40 @@
             }
         });
 
-        // Adicionar
+        // Placeholder para imagem vazia
+        const SEM_FOTO = "https://via.placeholder.com/300x300?text=Sem+Foto";
+
         window.adicionar = async () => {
             const nome = document.getElementById('nome').value;
             const preco = document.getElementById('preco').value;
+            const estoque = document.getElementById('estoque').value;
             const desc = document.getElementById('desc').value;
+            let imagem = document.getElementById('img-url').value;
 
-            if(nome && preco) {
+            if(!imagem) imagem = SEM_FOTO;
+
+            if(nome && preco && estoque) {
                 await addDoc(collection(db, "produtos"), {
-                    nome, preco, descricao: desc, criadoEm: new Date()
+                    nome, 
+                    preco, 
+                    estoque: parseInt(estoque), // Salva como número
+                    descricao: desc, 
+                    imagem: imagem,
+                    criadoEm: new Date()
                 });
-                alert("Produto Adicionado!");
+                alert("Produto Publicado!");
+                // Limpar campos
                 document.getElementById('nome').value = "";
                 document.getElementById('preco').value = "";
+                document.getElementById('estoque').value = "";
                 document.getElementById('desc').value = "";
+                document.getElementById('img-url').value = "";
+            } else {
+                alert("Preencha nome, preço e estoque!");
             }
         };
 
-        // Listar para Excluir
+        // Lista Simples para deletar
         const q = query(collection(db, "produtos"), orderBy("criadoEm", "desc"));
         onSnapshot(q, (snap) => {
             const div = document.getElementById('lista-admin');
@@ -62,16 +89,22 @@
             snap.forEach(d => {
                 const p = d.data();
                 div.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #333">
-                        <span>${p.nome}</span>
-                        <button onclick="deletar('${d.id}')" style="width:auto; padding:5px 10px; background:red">X</button>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333">
+                        <div style="display:flex; align-items:center; gap:10px">
+                            <img src="${p.imagem}" style="width:40px; height:40px; object-fit:cover; border-radius:4px">
+                            <div>
+                                <strong>${p.nome}</strong><br>
+                                <small>Estoque: ${p.estoque}</small>
+                            </div>
+                        </div>
+                        <button onclick="deletar('${d.id}')" style="width:auto; padding:5px 10px; background:var(--danger)">Excluir</button>
                     </div>
                 `;
             });
         });
 
         window.deletar = async (id) => {
-            if(confirm("Apagar?")) await deleteDoc(doc(db, "produtos", id));
+            if(confirm("Tem certeza que deseja apagar?")) await deleteDoc(doc(db, "produtos", id));
         }
     </script>
 </body>

@@ -2,20 +2,19 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Night Gamers | Início</title>
+    <title>Night Gamers | Loja</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <nav>
         <div style="font-weight:bold; font-size:1.2rem">Night Gamers 🎮</div>
-        <div id="nav-links">
-            </div>
+        <div id="nav-links"></div>
     </nav>
 
     <div class="container">
-        <h2>Catálogo Recente</h2>
+        <h2>Catálogo</h2>
         <input type="text" id="search" placeholder="🔍 Buscar produto..." onkeyup="render()">
-        <div id="grid" class="product-grid">Carregando...</div>
+        <div id="grid" class="product-grid">Carregando produtos...</div>
     </div>
 
     <script type="module">
@@ -25,19 +24,17 @@
 
         let produtos = [];
 
-        // Verifica Login para montar o menu
         onAuthStateChanged(auth, (user) => {
             const nav = document.getElementById('nav-links');
             if(user) {
-                let menu = `<a href="perfil.html">Minha Conta</a>`;
-                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent)">Painel Admin</a>`;
+                let menu = `<a href="perfil.html">Conta</a>`;
+                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent)">Admin</a>`;
                 nav.innerHTML = menu;
             } else {
-                nav.innerHTML = `<a href="login.html">Entrar / Cadastrar</a>`;
+                nav.innerHTML = `<a href="login.html">Entrar</a>`;
             }
         });
 
-        // Carrega Produtos
         const q = query(collection(db, "produtos"), orderBy("criadoEm", "desc"));
         onSnapshot(q, (snap) => {
             produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
@@ -50,11 +47,17 @@
             grid.innerHTML = "";
             
             produtos.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
+                // Se não tiver imagem salva (produtos antigos), usa placeholder
+                const img = p.imagem || "https://via.placeholder.com/300x300?text=Sem+Foto";
+                
                 grid.innerHTML += `
                 <div class="product-card" onclick="window.location.href='detalhes.html?id=${p.id}'">
-                    <h3>${p.nome}</h3>
-                    <p style="color:var(--accent); font-weight:bold">R$ ${p.preco}</p>
-                    <small style="color:#aaa">Ver detalhes</small>
+                    <img src="${img}" class="card-img" alt="${p.nome}">
+                    <div class="card-info">
+                        <h3>${p.nome}</h3>
+                        <p style="color:var(--accent); font-weight:bold; font-size:1.1rem">R$ ${p.preco}</p>
+                        <small style="color:#aaa">${p.estoque > 0 ? 'Disponível' : '❌ Esgotado'}</small>
+                    </div>
                 </div>`;
             });
         };
