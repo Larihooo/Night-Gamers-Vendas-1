@@ -9,20 +9,29 @@
             width: 100%; max-height: 200px; object-fit: contain;
             background: #000; border-radius: 8px; margin-top: 10px; display: none;
         }
+        .btn-edit { background: #f59e0b !important; width: auto; padding: 5px 10px; font-size: 12px; }
+        .btn-cancel { background: #64748b !important; margin-top: 5px; display: none; }
+        .search-admin-container {
+            background: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
     </style>
 </head>
 <body>
     <nav>
         <a href="index.html">⬅ Voltar para Loja</a>
-        <span style="color:var(--accent)">Painel Admin</span>
+        <span style="color:var(--accent)">Gerenciamento de Estoque</span>
     </nav>
 
     <div class="container">
-        <div class="card">
-            <h3>Adicionar Novo Produto</h3>
+        <div class="card" id="form-topo">
+            <h3 id="form-title">Adicionar Novo Produto</h3>
             
             <label>1. Link da Imagem</label>
-            <input type="url" id="img-url" placeholder="Cole o link da foto aqui (ex: ImgBB)" oninput="verPrevia()">
+            <input type="url" id="img-url" placeholder="Link do ImgBB ou similar" oninput="verPrevia()">
             <img id="img-preview" class="preview-img">
             
             <label style="margin-top:15px; display:block">2. Nome do Produto</label>
@@ -35,14 +44,22 @@
                 </div>
                 <div style="flex:1">
                     <label>4. Quantidade em Estoque</label>
-                    <input type="number" id="estoque" placeholder="Ex: 5" style="border:1px solid var(--accent)">
+                    <input type="number" id="estoque" placeholder="Ex: 5">
                 </div>
             </div>
 
             <label style="margin-top:15px; display:block">5. Descrição Detalhada</label>
             <textarea id="desc" placeholder="Descreva o produto..." rows="4"></textarea>
             
-            <button id="btn-publicar" onclick="adicionar()">Publicar Produto</button>
+            <button id="btn-acao" onclick="processarAcao()">Publicar Produto</button>
+            <button id="btn-cancelar" class="btn-cancel" onclick="cancelarEdicao()">Cancelar Edição</button>
+        </div>
+
+        <hr style="margin: 40px 0; border: 0; border-top: 1px solid #333;">
+
+        <div class="search-admin-container">
+            <label>🔍 Localizar item no inventário</label>
+            <input type="text" id="input-busca-admin" placeholder="Digite o nome do produto para editar ou excluir..." onkeyup="renderLista()">
         </div>
 
         <h3>Itens no Inventário</h3>
@@ -52,68 +69,128 @@
     <script type="module">
         import { db, auth, ADMIN_EMAIL } from './firebase.js';
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-        import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        let idEdicao = null; // Guarda o ID se estivermos editando
+        let produtosLocal = [];
 
         // Segurança Admin
         onAuthStateChanged(auth, (user) => {
             if(!user || user.email !== ADMIN_EMAIL) window.location.href = "index.html";
         });
 
-        // Função de Prévia
+        // Prévia da Imagem
         window.verPrevia = () => {
             const url = document.getElementById('img-url').value;
             const img = document.getElementById('img-preview');
-            if(url) {
-                img.src = url;
-                img.style.display = 'block';
-            } else {
-                img.style.display = 'none';
-            }
+            img.src = url;
+            img.style.display = url ? 'block' : 'none';
         };
 
-        window.adicionar = async () => {
-            const nome = document.getElementById('nome').value;
-            const preco = document.getElementById('preco').value;
-            const estoque = document.getElementById('estoque').value;
-            const desc = document.getElementById('desc').value;
-            const imagem = document.getElementById('img-url').value;
+        // Função Principal: Publicar ou Atualizar
+        window.processarAcao = async () => {
+            const dados = {
+                nome: document.getElementById('nome').value,
+                preco: document.getElementById('preco').value,
+                estoque: parseInt(document.getElementById('estoque').value),
+                descricao: document.getElementById('desc').value,
+                imagem: document.getElementById('img-url').value,
+                atualizadoEm: new Date()
+            };
 
-            if(!nome || !preco || !estoque || !imagem) {
-                return alert("Por favor, preencha todos os campos, incluindo o link da imagem!");
+            if(!dados.nome || !dados.preco || isNaN(dados.estoque) || !dados.imagem) {
+                return alert("Preencha todos os campos obrigatórios!");
             }
 
             try {
-                await addDoc(collection(db, "produtos"), {
-                    nome, preco, 
-                    estoque: parseInt(estoque),
-                    descricao: desc, 
-                    imagem: imagem,
-                    criadoEm: new Date()
-                });
-                alert("Produto cadastrado!");
-                location.reload();
+                if(idEdicao) {
+                    // MODO EDIÇÃO
+                    await updateDoc(doc(db, "produtos", idEdicao), dados);
+                    alert("Produto atualizado com sucesso!");
+                } else {
+                    // MODO NOVO
+                    dados.criadoEm = new Date();
+                    await addDoc(collection(db, "produtos"), dados);
+                    alert("Produto publicado!");
+                }
+                cancelarEdicao(); // Limpa o formulário
             } catch(e) { alert("Erro: " + e.message); }
         };
 
-        // Lista para excluir
+        // Função para carregar dados no form para editar
+        window.prepararEdicao = (id) => {
+            const p = produtosLocal.find(item => item.id === id);
+            if(!p) return;
+
+            idEdicao = id;
+            document.getElementById('form-title').innerText = "Editando: " + p.nome;
+            document.getElementById('btn-acao').innerText = "Salvar Alterações";
+            document.getElementById('btn-acao').style.background = "var(--accent)";
+            document.getElementById('btn-cancelar').style.display = "block";
+
+            // Preenche campos
+            document.getElementById('nome').value = p.nome;
+            document.getElementById('preco').value = p.preco;
+            document.getElementById('estoque').value = p.estoque;
+            document.getElementById('desc').value = p.descricao;
+            document.getElementById('img-url').value = p.imagem;
+            
+            window.verPrevia();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        window.cancelarEdicao = () => {
+            idEdicao = null;
+            document.getElementById('form-title').innerText = "Adicionar Novo Produto";
+            document.getElementById('btn-acao').innerText = "Publicar Produto";
+            document.getElementById('btn-acao').style.background = "var(--primary)";
+            document.getElementById('btn-cancelar').style.display = "none";
+            
+            // Limpa campos
+            document.getElementById('nome').value = "";
+            document.getElementById('preco').value = "";
+            document.getElementById('estoque').value = "";
+            document.getElementById('desc').value = "";
+            document.getElementById('img-url').value = "";
+            window.verPrevia();
+        };
+
+        // Escuta o banco de dados
         onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
-            const div = document.getElementById('lista-admin');
-            div.innerHTML = "";
-            snap.forEach(d => {
-                const p = d.data();
-                div.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:8px">
-                        <div style="display:flex; align-items:center; gap:10px">
-                            <img src="${p.imagem}" style="width:40px; height:40px; object-fit:cover; border-radius:4px">
-                            <span>${p.nome} (Qtd: ${p.estoque})</span>
-                        </div>
-                        <button onclick="deletar('${d.id}')" style="width:auto; padding:5px 10px; background:red; font-size:12px">Remover</button>
-                    </div>`;
-            });
+            produtosLocal = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            window.renderLista();
         });
 
+        // Renderiza a lista com filtro de busca
+        window.renderLista = () => {
+            const busca = document.getElementById('input-busca-admin').value.toLowerCase();
+            const div = document.getElementById('lista-admin');
+            div.innerHTML = "";
+
+            const filtrados = produtosLocal.filter(p => p.nome.toLowerCase().includes(busca));
+
+            filtrados.forEach(p => {
+                div.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px; border-bottom:1px solid #333; background:rgba(0,0,0,0.2); margin-bottom:8px; border-radius:8px">
+                        <div style="display:flex; align-items:center; gap:12px">
+                            <img src="${p.imagem}" style="width:45px; height:45px; object-fit:cover; border-radius:6px">
+                            <div>
+                                <strong>${p.nome}</strong><br>
+                                <small style="color:var(--accent)">R$ ${p.preco} | Estoque: ${p.estoque}</small>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:5px">
+                            <button onclick="prepararEdicao('${p.id}')" class="btn-edit">Editar</button>
+                            <button onclick="deletar('${p.id}')" style="width:auto; padding:5px 10px; background:red; font-size:12px">Excluir</button>
+                        </div>
+                    </div>`;
+            });
+        };
+
         window.deletar = async (id) => {
-            if(confirm("Excluir item?")) await deleteDoc(doc(db, "produtos", id));
+            if(confirm("Tem certeza que deseja remover este item permanentemente?")) {
+                await deleteDoc(doc(db, "produtos", id));
+            }
         };
     </script>
 </body>
