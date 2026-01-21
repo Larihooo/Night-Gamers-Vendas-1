@@ -2,158 +2,48 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Painel Admin - Night Gamers</title>
+    <title>Admin - Night Gamers</title>
     <link rel="stylesheet" href="style.css">
-    <style>
-        .preview-img { width: 100%; max-height: 200px; object-fit: contain; background: #000; border-radius: 8px; margin-top: 10px; display: none; }
-        .btn-edit { background: #f59e0b !important; width: auto; padding: 5px 10px; font-size: 12px; border:none; color:white; border-radius:4px; cursor:pointer; }
-        .btn-del { background: #ef4444 !important; width: auto; padding: 5px 10px; font-size: 12px; border:none; color:white; border-radius:4px; cursor:pointer; }
-        .search-admin-container { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #333; }
-        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 8px; }
-    </style>
 </head>
 <body>
-    <nav>
-        <a href="index.html" style="color:white; text-decoration:none;">⬅ Voltar</a>
-        <span style="color:var(--accent); font-weight:bold;">Painel de Gestão</span>
-    </nav>
-
     <div class="container">
-        <div class="card" id="form-topo">
-            <h3 id="form-title">Cadastrar Novo Produto</h3>
-            
-            <label>Link da Imagem</label>
-            <input type="text" id="campo-imagem" placeholder="Link do ImgBB" oninput="document.getElementById('img-preview').src=this.value; document.getElementById('img-preview').style.display='block'">
-            <img id="img-preview" class="preview-img">
-            
-            <label>Nome do Produto</label>
-            <input type="text" id="campo-nome" placeholder="Ex: Mouse Gamer Pro">
-            
-            <div style="display:flex; gap:10px">
-                <div style="flex:1">
-                    <label>Preço (R$)</label>
-                    <input type="text" id="campo-preco" placeholder="59.90">
-                </div>
-                <div style="flex:1">
-                    <label>Estoque</label>
-                    <input type="text" id="campo-estoque" placeholder="10">
-                </div>
-            </div>
-
-            <label style="color:var(--accent)">Entrega Digital (Link ou Chave)</label>
-            <textarea id="campo-entrega" placeholder="O que o cliente recebe após o pagamento?" rows="2"></textarea>
-
-            <label>Descrição</label>
-            <textarea id="campo-desc" placeholder="Detalhes do produto..." rows="3"></textarea>
-            
-            <button id="btn-acao" onclick="executar()">Publicar Produto</button>
-            <button id="btn-cancel" style="display:none; background:#475569; margin-top:5px" onclick="limpar()">Cancelar Edição</button>
+        <div class="card">
+            <h3>Novo Produto</h3>
+            <input type="text" id="nome" placeholder="Nome">
+            <input type="text" id="preco" placeholder="Preço (Ex: 50.00)">
+            <input type="text" id="img" placeholder="URL da Imagem">
+            <textarea id="entrega" placeholder="Link/Chave de entrega"></textarea>
+            <button id="btn-add">Salvar Produto</button>
         </div>
-
-        <div class="search-admin-container" style="margin-top:40px">
-            <input type="text" id="busca-admin" placeholder="🔍 Buscar produto no seu estoque..." onkeyup="renderizar()">
-        </div>
-
-        <div id="lista-admin">Carregando itens...</div>
+        <div id="lista-admin"></div>
     </div>
 
     <script type="module">
-        import { db, auth, ADMIN_EMAIL } from './firebase.js';
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-        import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { db } from './firebase.js';
+        import { collection, addDoc, query, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        let idAtual = null;
-        let produtos = [];
-
-        onAuthStateChanged(auth, (user) => {
-            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "login.html";
-        });
-
-        window.executar = async () => {
-            const btn = document.getElementById('btn-acao');
-            btn.disabled = true;
-            btn.innerText = "Processando...";
-
-            const dados = {
-                nome: document.getElementById('campo-nome').value,
-                preco: document.getElementById('campo-preco').value,
-                estoque: parseInt(document.getElementById('campo-estoque').value) || 0,
-                entrega: document.getElementById('campo-entrega').value,
-                descricao: document.getElementById('campo-desc').value,
-                imagem: document.getElementById('campo-imagem').value,
-                atualizadoEm: new Date()
+        document.getElementById('btn-add').onclick = async () => {
+            const p = {
+                nome: document.getElementById('nome').value,
+                preco: document.getElementById('preco').value,
+                imagem: document.getElementById('img').value,
+                entrega: document.getElementById('entrega').value,
+                criadoEm: new Date()
             };
-
-            try {
-                if(idAtual) {
-                    await updateDoc(doc(db, "produtos", idAtual), dados);
-                    alert("Produto atualizado!");
-                } else {
-                    dados.criadoEm = new Date();
-                    await addDoc(collection(db, "produtos"), dados);
-                    alert("Produto cadastrado!");
-                }
-                limpar();
-            } catch(e) { alert("Erro ao salvar: " + e.message); }
-            finally { 
-                btn.disabled = false; 
-                btn.innerText = idAtual ? "Salvar Alterações" : "Publicar Produto";
-            }
+            await addDoc(collection(db, "produtos"), p);
+            location.reload();
         };
 
-        window.prepararEdicao = (id) => {
-            const p = produtos.find(item => item.id === id);
-            if(!p) return;
-            idAtual = id;
-            document.getElementById('form-title').innerText = "Editando: " + p.nome;
-            document.getElementById('campo-nome').value = p.nome || "";
-            document.getElementById('campo-preco').value = p.preco || "";
-            document.getElementById('campo-estoque').value = p.estoque || 0;
-            document.getElementById('campo-entrega').value = p.entrega || "";
-            document.getElementById('campo-desc').value = p.descricao || "";
-            document.getElementById('campo-imagem').value = p.imagem || "";
-            document.getElementById('btn-acao').innerText = "Salvar Alterações";
-            document.getElementById('btn-cancel').style.display = "block";
-            document.getElementById('img-preview').src = p.imagem;
-            document.getElementById('img-preview').style.display = 'block';
-            window.scrollTo({top: 0, behavior: 'smooth'});
-        };
-
-        window.limpar = () => {
-            idAtual = null;
-            document.getElementById('form-title').innerText = "Cadastrar Novo Produto";
-            document.getElementById('btn-acao').innerText = "Publicar Produto";
-            document.getElementById('btn-cancel').style.display = "none";
-            document.querySelectorAll('input, textarea').forEach(i => i.value = "");
-            document.getElementById('img-preview').style.display = 'none';
-        };
-
-        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
-            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            renderizar();
+        onSnapshot(query(collection(db, "produtos")), (snap) => {
+            const lista = document.getElementById('lista-admin');
+            lista.innerHTML = "";
+            snap.forEach(d => {
+                const item = d.data();
+                lista.innerHTML += `<div class="card">${item.nome} <button onclick="window.del('${d.id}')" style="width:auto; background:red">X</button></div>`;
+            });
         });
 
-        window.renderizar = () => {
-            const busca = document.getElementById('busca-admin').value.toLowerCase();
-            const div = document.getElementById('lista-admin');
-            div.innerHTML = "";
-            
-            produtos.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
-                div.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:rgba(255,255,255,0.05); margin-bottom:10px; border-radius:10px; border:1px solid #333">
-                        <div style="display:flex; align-items:center; gap:10px">
-                            <img src="${p.imagem}" style="width:40px; height:40px; border-radius:5px; object-fit:cover">
-                            <div><strong>${p.nome}</strong><br><small>R$ ${p.preco} | Est: ${p.estoque}</small></div>
-                        </div>
-                        <div style="display:flex; gap:8px">
-                            <button onclick="prepararEdicao('${p.id}')" class="btn-edit">Editar</button>
-                            <button onclick="deletar('${p.id}')" class="btn-del">X</button>
-                        </div>
-                    </div>`;
-            });
-        };
-
-        window.deletar = async (id) => { if(confirm("Deseja mesmo excluir?")) await deleteDoc(doc(db, "produtos", id)); };
+        window.del = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "produtos", id)); };
     </script>
 </body>
 </html>

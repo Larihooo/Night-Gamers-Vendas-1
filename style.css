@@ -1,12 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-
 :root {
-    --bg: #0f172a;
-    --glass: rgba(30, 41, 59, 0.7);
-    --border: rgba(255, 255, 255, 0.1);
     --primary: #6366f1;
-    --accent: #10b981;
-    --danger: #ef4444; /* Cor para Esgotado/Excluir */
+    --accent: #22c55e;
+    --bg: #0f172a;
+    --card: #1e293b;
     --text: #f8fafc;
 }
 
@@ -14,78 +10,57 @@ body {
     background-color: var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
-    margin: 0; padding: 0;
-    min-height: 100vh;
+    margin: 0;
+    padding: 0;
 }
 
-nav {
-    background: var(--glass);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-    padding: 1rem 2rem;
-    display: flex; justify-content: space-between; align-items: center;
-    position: sticky; top: 0; z-index: 100;
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
 }
-nav a { color: var(--text); text-decoration: none; margin-left: 15px; font-size: 0.9rem; transition:0.3s}
-nav a:hover { color: var(--primary); }
 
-.container { max-width: 900px; margin: 40px auto; padding: 20px; }
-
-/* Cards */
 .card {
-    background: var(--glass);
-    border: 1px solid var(--border);
+    background: var(--card);
+    padding: 20px;
     border-radius: 12px;
-    padding: 2rem;
+    border: 1px solid #334155;
     margin-bottom: 20px;
 }
 
-/* Inputs */
-input, textarea, select {
-    width: 100%; padding: 12px; margin: 8px 0;
-    background: rgba(0,0,0,0.3); border: 1px solid var(--border);
-    color: white; border-radius: 8px; outline: none;
+nav {
+    padding: 15px 20px;
+    background: #111827;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #334155;
 }
 
 button {
-    width: 100%; padding: 12px; background: var(--primary);
-    color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px;
-}
-button:hover { opacity: 0.9; }
-button:disabled { background: #555; cursor: not-allowed; }
-
-/* GRID DE PRODUTOS */
-.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
-
-.product-card { 
-    background: rgba(255,255,255,0.05);
-    border-radius: 12px;
-    overflow: hidden; /* Corta a imagem se passar */
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
     cursor: pointer;
-    transition: 0.3s;
-    border: 1px solid transparent;
-    display: flex; flex-direction: column;
-}
-
-.product-card:hover { border-color: var(--primary); transform: translateY(-5px); }
-
-/* FOTO DO PRODUTO NO CARD */
-.card-img {
+    font-weight: bold;
     width: 100%;
-    height: 180px;
-    object-fit: cover; /* Garante que preenche sem esticar */
-    background: #000;
 }
 
-.card-info { padding: 15px; }
-
-/* Página de Detalhes */
-.detail-layout { display: flex; gap: 30px; flex-wrap: wrap; }
-.detail-img { flex: 1; min-width: 300px; border-radius: 12px; max-height: 500px; object-fit: cover; }
-.detail-info { flex: 1; min-width: 300px; }
-
-.estoque-badge {
-    display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-bottom: 10px;
+input, textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    background: #0f172a;
+    border: 1px solid #334155;
+    color: white;
+    border-radius: 8px;
+    box-sizing: border-box;
 }
-.em-estoque { background: rgba(16, 185, 129, 0.2); color: var(--accent); }
-.sem-estoque { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+
+/* Modal PIX */
+#modal-pix {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.95); z-index: 10000; justify-content: center; align-items: center;
+}
