@@ -2,8 +2,14 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Administração</title>
+    <title>Painel Admin - Night Gamers</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .preview-img {
+            width: 100%; max-height: 200px; object-fit: contain;
+            background: #000; border-radius: 8px; margin-top: 10px; display: none;
+        }
+    </style>
 </head>
 <body>
     <nav>
@@ -15,23 +21,31 @@
         <div class="card">
             <h3>Adicionar Novo Produto</h3>
             
-            <label>Link da Imagem (URL)</label>
-            <input type="url" id="img-url" placeholder="https://exemplo.com/foto.jpg">
+            <label>1. Link da Imagem</label>
+            <input type="url" id="img-url" placeholder="Cole o link da foto aqui (ex: ImgBB)" oninput="verPrevia()">
+            <img id="img-preview" class="preview-img">
             
-            <label>Nome do Produto</label>
-            <input type="text" id="nome" placeholder="Ex: Headset Gamer">
+            <label style="margin-top:15px; display:block">2. Nome do Produto</label>
+            <input type="text" id="nome" placeholder="Ex: Headset Gamer Pro">
             
-            <div style="display:flex; gap:10px">
-                <input type="number" id="preco" placeholder="Preço (R$)" style="flex:1">
-                <input type="number" id="estoque" placeholder="Qtd. Estoque" style="flex:1">
+            <div style="display:flex; gap:15px">
+                <div style="flex:1">
+                    <label>3. Preço (R$)</label>
+                    <input type="number" id="preco" placeholder="0.00">
+                </div>
+                <div style="flex:1">
+                    <label>4. Quantidade em Estoque</label>
+                    <input type="number" id="estoque" placeholder="Ex: 5" style="border:1px solid var(--accent)">
+                </div>
             </div>
 
-            <textarea id="desc" placeholder="Descrição completa do produto..." rows="4"></textarea>
+            <label style="margin-top:15px; display:block">5. Descrição Detalhada</label>
+            <textarea id="desc" placeholder="Descreva o produto..." rows="4"></textarea>
             
-            <button onclick="adicionar()">Publicar Produto</button>
+            <button id="btn-publicar" onclick="adicionar()">Publicar Produto</button>
         </div>
 
-        <h3>Estoque Atual</h3>
+        <h3>Itens no Inventário</h3>
         <div id="lista-admin">Carregando...</div>
     </div>
 
@@ -40,72 +54,67 @@
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
         import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        // Segurança
+        // Segurança Admin
         onAuthStateChanged(auth, (user) => {
-            if(!user || user.email !== ADMIN_EMAIL) {
-                alert("Acesso Negado.");
-                window.location.href = "index.html";
-            }
+            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "index.html";
         });
 
-        // Placeholder para imagem vazia
-        const SEM_FOTO = "https://via.placeholder.com/300x300?text=Sem+Foto";
+        // Função de Prévia
+        window.verPrevia = () => {
+            const url = document.getElementById('img-url').value;
+            const img = document.getElementById('img-preview');
+            if(url) {
+                img.src = url;
+                img.style.display = 'block';
+            } else {
+                img.style.display = 'none';
+            }
+        };
 
         window.adicionar = async () => {
             const nome = document.getElementById('nome').value;
             const preco = document.getElementById('preco').value;
             const estoque = document.getElementById('estoque').value;
             const desc = document.getElementById('desc').value;
-            let imagem = document.getElementById('img-url').value;
+            const imagem = document.getElementById('img-url').value;
 
-            if(!imagem) imagem = SEM_FOTO;
+            if(!nome || !preco || !estoque || !imagem) {
+                return alert("Por favor, preencha todos os campos, incluindo o link da imagem!");
+            }
 
-            if(nome && preco && estoque) {
+            try {
                 await addDoc(collection(db, "produtos"), {
-                    nome, 
-                    preco, 
-                    estoque: parseInt(estoque), // Salva como número
+                    nome, preco, 
+                    estoque: parseInt(estoque),
                     descricao: desc, 
                     imagem: imagem,
                     criadoEm: new Date()
                 });
-                alert("Produto Publicado!");
-                // Limpar campos
-                document.getElementById('nome').value = "";
-                document.getElementById('preco').value = "";
-                document.getElementById('estoque').value = "";
-                document.getElementById('desc').value = "";
-                document.getElementById('img-url').value = "";
-            } else {
-                alert("Preencha nome, preço e estoque!");
-            }
+                alert("Produto cadastrado!");
+                location.reload();
+            } catch(e) { alert("Erro: " + e.message); }
         };
 
-        // Lista Simples para deletar
-        const q = query(collection(db, "produtos"), orderBy("criadoEm", "desc"));
-        onSnapshot(q, (snap) => {
+        // Lista para excluir
+        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
             const div = document.getElementById('lista-admin');
             div.innerHTML = "";
             snap.forEach(d => {
                 const p = d.data();
                 div.innerHTML += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333; background:rgba(255,255,255,0.05); margin-bottom:5px; border-radius:8px">
                         <div style="display:flex; align-items:center; gap:10px">
                             <img src="${p.imagem}" style="width:40px; height:40px; object-fit:cover; border-radius:4px">
-                            <div>
-                                <strong>${p.nome}</strong><br>
-                                <small>Estoque: ${p.estoque}</small>
-                            </div>
+                            <span>${p.nome} (Qtd: ${p.estoque})</span>
                         </div>
-                        <button onclick="deletar('${d.id}')" style="width:auto; padding:5px 10px; background:var(--danger)">Excluir</button>
-                    </div>
-                `;
+                        <button onclick="deletar('${d.id}')" style="width:auto; padding:5px 10px; background:red; font-size:12px">Remover</button>
+                    </div>`;
             });
         });
 
         window.deletar = async (id) => {
-            if(confirm("Tem certeza que deseja apagar?")) await deleteDoc(doc(db, "produtos", id));
-        }
+            if(confirm("Excluir item?")) await deleteDoc(doc(db, "produtos", id));
+        };
     </script>
 </body>
 </html>

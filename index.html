@@ -2,19 +2,117 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Night Gamers | Loja</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Gamers | Loja Oficial</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Estilos específicos para turbinar a vitrine */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .product-card {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: 0.4s;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .card-img-container {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: 0.5s;
+        }
+
+        .product-card:hover .card-img {
+            transform: scale(1.1);
+        }
+
+        .card-content {
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        .price-tag {
+            color: var(--accent);
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+
+        .stock-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            padding: 5px 12px;
+            border-radius: 50px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            backdrop-filter: blur(5px);
+        }
+
+        .badge-available { background: rgba(16, 185, 129, 0.8); color: white; }
+        .badge-out { background: rgba(239, 68, 68, 0.8); color: white; }
+
+        .search-box {
+            background: var(--glass);
+            border: 1px solid var(--border);
+            padding: 15px 25px;
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .search-box input {
+            border: none;
+            background: transparent;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
 </head>
 <body>
     <nav>
-        <div style="font-weight:bold; font-size:1.2rem">Night Gamers 🎮</div>
+        <div style="font-weight:900; font-size:1.5rem; letter-spacing: -1px;">NIGHT <span style="color:var(--primary)">GAMERS</span></div>
         <div id="nav-links"></div>
     </nav>
 
-    <div class="container">
-        <h2>Catálogo</h2>
-        <input type="text" id="search" placeholder="🔍 Buscar produto..." onkeyup="render()">
-        <div id="grid" class="product-grid">Carregando produtos...</div>
+    <div class="container" style="max-width: 1100px;">
+        <header style="margin-bottom: 40px; text-align: center;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 10px;">Equipamentos de <span style="color:var(--primary)">Elite</span></h1>
+            <p style="color: #94a3b8;">Sua jornada gamer começa com o setup certo.</p>
+        </header>
+
+        <div class="search-box">
+            <span style="font-size: 1.2rem;">🔍</span>
+            <input type="text" id="search" placeholder="O que você está procurando?" onkeyup="render()">
+        </div>
+
+        <div id="grid" class="product-grid">Carregando estoque...</div>
     </div>
 
     <script type="module">
@@ -24,39 +122,56 @@
 
         let produtos = [];
 
+        // Controle de Navegação
         onAuthStateChanged(auth, (user) => {
             const nav = document.getElementById('nav-links');
             if(user) {
-                let menu = `<a href="perfil.html">Conta</a>`;
-                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent)">Admin</a>`;
+                let menu = `<a href="perfil.html">Minha Conta</a>`;
+                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent); font-weight:bold;">● Painel Admin</a>`;
                 nav.innerHTML = menu;
             } else {
-                nav.innerHTML = `<a href="login.html">Entrar</a>`;
+                nav.innerHTML = `<a href="login.html" style="background:var(--primary); padding: 8px 20px; border-radius: 8px; font-weight:bold;">Entrar</a>`;
             }
         });
 
+        // Escutar Banco de Dados em tempo real
         const q = query(collection(db, "produtos"), orderBy("criadoEm", "desc"));
         onSnapshot(q, (snap) => {
             produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            window.render();
+            render();
         });
 
         window.render = () => {
-            const busca = document.getElementById('search').value.toLowerCase();
+            const termo = document.getElementById('search').value.toLowerCase();
             const grid = document.getElementById('grid');
             grid.innerHTML = "";
             
-            produtos.filter(p => p.nome.toLowerCase().includes(busca)).forEach(p => {
-                // Se não tiver imagem salva (produtos antigos), usa placeholder
-                const img = p.imagem || "https://via.placeholder.com/300x300?text=Sem+Foto";
-                
+            const filtrados = produtos.filter(p => p.nome.toLowerCase().includes(termo));
+
+            if(filtrados.length === 0) {
+                grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 50px; color: #64748b;">Nenhum produto encontrado.</div>`;
+                return;
+            }
+
+            filtrados.forEach(p => {
+                const temEstoque = p.estoque > 0;
+                const statusBadge = temEstoque 
+                    ? `<div class="stock-badge badge-available">Disponível</div>` 
+                    : `<div class="stock-badge badge-out">Esgotado</div>`;
+
                 grid.innerHTML += `
-                <div class="product-card" onclick="window.location.href='detalhes.html?id=${p.id}'">
-                    <img src="${img}" class="card-img" alt="${p.nome}">
-                    <div class="card-info">
-                        <h3>${p.nome}</h3>
-                        <p style="color:var(--accent); font-weight:bold; font-size:1.1rem">R$ ${p.preco}</p>
-                        <small style="color:#aaa">${p.estoque > 0 ? 'Disponível' : '❌ Esgotado'}</small>
+                <div class="product-card" onclick="window.location.href='detalhes.html?id=${p.id}'" style="cursor:pointer;">
+                    ${statusBadge}
+                    <div class="card-img-container">
+                        <img src="${p.imagem}" class="card-img" alt="${p.nome}" onerror="this.src='https://via.placeholder.com/300x200?text=Sem+Imagem'">
+                    </div>
+                    <div class="card-content">
+                        <h3 style="margin:0; font-size: 1.2rem;">${p.nome}</h3>
+                        <div class="price-tag">R$ ${p.preco}</div>
+                        <div style="font-size: 0.8rem; color: #94a3b8;">
+                            ${temEstoque ? `Apenas ${p.estoque} unidades restando!` : 'Aguardando reposição'}
+                        </div>
+                        <button style="margin-top: 15px; font-size: 0.9rem; padding: 10px;">Ver Detalhes</button>
                     </div>
                 </div>`;
             });
