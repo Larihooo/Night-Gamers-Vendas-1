@@ -99,3 +99,24 @@ button { background: var(--accent); color: white; border: none; padding: 10px 20
 input, textarea { background: #0f172a; border: 1px solid #334155; color: white; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
 
 @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span, .sidebar h2 { display: none; } .main-content { margin-left: 70px; } }
+
+.btn-voltar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--secondary);
+    color: #94a3b8;
+    padding: 8px 15px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+    border: 1px solid #334155;
+    transition: 0.3s;
+    cursor: pointer;
+}
+
+.btn-voltar:hover {
+    background: #334155;
+    color: white;
+}
