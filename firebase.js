@@ -1,6 +1,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyByiAUMQ3I94RkRbjSDF_faBtJdTWfF6Ec",
@@ -14,7 +15,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const ADMIN_EMAIL = "eliasfabisantos@gmail.com"; // VERIFIQUE SE ESTA LINHA EXISTE
+export const storage = getStorage(app);
+export const ADMIN_EMAIL = "eliasfabisantos@gmail.com";
 
 async function enviarPagamento(formData) {
     const API_URL = "https://api.mercadopago.com/v1/payments";
@@ -69,3 +71,11 @@ async function enviarPagamento(formData) {
         alert("Erro de conexão com o servidor de pagamento.");
     }
 }
+import { auth, ADMIN_EMAIL } from './firebase.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+onAuthStateChanged(auth, (user) => {
+    if (user && user.email === ADMIN_EMAIL) {
+        document.getElementById('admin-link').style.display = 'block';
+    }
+});

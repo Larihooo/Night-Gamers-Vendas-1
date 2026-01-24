@@ -1,187 +1,164 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pagamento Seguro - Night Gamers</title>
-    <link rel="stylesheet" href="style.css" />
-    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalhes do Produto - Night Gamers</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
-    
     <style>
-        .qr-img { width: 200px; height: 200px; margin: 15px auto; background: white; padding: 10px; border-radius: 8px; }
-        #loading-checkout { text-align: center; padding: 20px; color: #6366f1; font-weight: bold; }
+        /* Estilos da Sidebar */
+        .sidebar {
+            height: 100%; width: 250px; position: fixed; z-index: 1000;
+            top: 0; left: 0; background-color: #111827; overflow-x: hidden;
+            padding-top: 20px; border-right: 1px solid #334155;
+        }
+        .sidebar h2 { color: white; text-align: center; font-size: 1.5rem; margin-bottom: 30px; }
+        .sidebar a {
+            padding: 15px 25px; text-decoration: none; font-size: 18px;
+            color: #94a3b8; display: block; transition: 0.3s;
+        }
+        .sidebar a:hover { color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+        .main-content { margin-left: 250px; padding: 20px; }
+        #admin-link { display: none; color: #f59e0b; font-weight: bold; }
+
+        /* Ajustes Mobile */
+        @media screen and (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .sidebar h2, .sidebar span { display: none; }
+            .main-content { margin-left: 60px; }
+        }
+
+        /* Card de Detalhes */
+        .detalhes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
+        .img-detalhe { width: 100%; border-radius: 15px; border: 1px solid #334155; }
+        .desc-texto { color: #94a3b8; line-height: 1.6; margin: 20px 0; font-size: 1.1rem; }
+
+        /* Estilo do Modal PIX */
         #modal-pix-entrega {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center;
         }
-        .pix-box {
-            background: #1e293b; padding: 30px; border-radius: 15px; text-align: center; 
-            max-width: 380px; width: 90%; border: 2px solid #6366f1;
-        }
+        .pix-box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; border: 2px solid #6366f1; }
+        .qr-img { background: white; padding: 10px; border-radius: 10px; margin: 20px 0; width: 200px; }
     </style>
 </head>
 <body>
-    <nav>
-        <a href="index.html" style="color:white; text-decoration:none">⬅ Voltar</a>
-    </nav>
+
+    <div class="sidebar">
+        <h2>Night Gamers</h2>
+        <a href="index.html">🏠 <span>Início</span></a>
+        <a href="feed.html">📱 <span>Feed Social</span></a>
+        <a href="perfil.html">👤 <span>Minha Conta</span></a>
+        <a href="admin.html" id="admin-link">⚙️ <span>Painel Admin</span></a>
+    </div>
+
+    <div class="main-content">
+        <div class="container">
+            <div id="carregando">Carregando detalhes...</div>
+            
+            <div id="conteudo-produto" style="display:none;">
+                <div class="detalhes-grid">
+                    <div>
+                        <img id="prod-img" src="" class="img-detalhe">
+                    </div>
+                    <div class="card">
+                        <h1 id="prod-nome"></h1>
+                        <div id="prod-preco" style="font-size: 2rem; color: var(--accent); font-weight: bold;"></div>
+                        
+                        <div id="prod-descricao" class="desc-texto"></div>
+
+                        <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
+                        
+                        <h3>Finalizar Pagamento</h3>
+                        <div id="wallet_container"></div> </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="modal-pix-entrega">
         <div class="pix-box">
-            <h3 style="color:#6366f1">Pague com PIX</h3>
+            <h2 style="color:white">Pague com PIX</h2>
             <div id="area-qrcode"></div>
-            <p style="font-size: 0.8rem; margin-top:10px; color: white;">Copie o código abaixo:</p>
-            <textarea id="texto-pix" rows="3" readonly style="width:100%; background:#000; color:#fff; border:1px solid #333; font-size:0.7rem; margin-bottom:10px; padding: 10px;"></textarea>
-            <button onclick="copiarPixChave()">Copiar Código PIX</button>
-            <p style="font-size:0.7rem; color:#94a3b8; margin-top:15px">Aguardando confirmação... não feche esta página.</p>
+            <p style="color:#94a3b8; font-size: 0.8rem;">Aponte a câmera ou copie o código</p>
+            <button onclick="copiarPixChave()" style="background:#334155; margin-top:10px">Copiar Código PIX</button>
+            <p id="texto-pix" style="display:none"></p>
+            <div style="margin-top:20px; color:var(--accent)">Aguardando pagamento... 🔄</div>
         </div>
-    </div>
-
-    <div class="container" style="max-width: 600px;">
-        <div id="info-p" class="card" style="text-align: center;">
-            <p>Carregando informações do produto...</p>
-        </div>
-        
-        <div id="loading-checkout">Preparando checkout...</div>
-        <div id="paymentBrick_container"></div>
     </div>
 
     <script type="module">
-        import { db } from './firebase.js';
+        import { db, auth, ADMIN_EMAIL } from './firebase.js?v=1';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-
-        // CONFIGURAÇÕES
-        const PUBLIC_KEY = 'APP_USR-3ea70421-3dea-4d05-ba72-120110ed6365';
-        const ACCESS_TOKEN = 'APP_USR-6959306902120043-012021-db4a82787f589fbe871162d1119c6506-1698285173';
-        const PROXY = "https://corsproxy.io/?"; 
-        const API_URL = "https://api.mercadopago.com/v1/payments";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
         const params = new URLSearchParams(window.location.search);
-        const prodId = params.get('id');
+        const id = params.get('id');
         let prodDados = null;
 
-        const mp = new MercadoPago(PUBLIC_KEY, { locale: 'pt-BR' });
-        const bricksBuilder = mp.bricks();
+        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d', { locale: 'pt-BR' });
 
-        async function iniciar() {
-            if (!prodId) { window.location.href = 'index.html'; return; }
+        // 1. Controle de Visibilidade do Admin na Sidebar
+        onAuthStateChanged(auth, (user) => {
+            if (user && user.email === ADMIN_EMAIL) {
+                document.getElementById('admin-link').style.display = 'block';
+            }
+        });
 
-            try {
-                const snap = await getDoc(doc(db, "produtos", prodId));
-                if (snap.exists()) {
-                    prodDados = snap.data();
-                    document.getElementById('info-p').innerHTML = `
-                        <img src="${prodDados.imagem}" style="width:100px; border-radius:10px" alt="produto" />
-                        <h3>${prodDados.nome}</h3>
-                        <h2 style="color:#22c55e">R$ ${prodDados.preco}</h2>
-                    `;
-                    renderizarCheckout();
-                } else {
-                    window.location.href = 'index.html';
-                }
-            } catch (err) {
-                console.error("Erro Firebase:", err);
+        // 2. Carregar Dados do Produto
+        async function carregar() {
+            if(!id) { window.location.href = "index.html"; return; }
+            
+            const docRef = doc(db, "produtos", id);
+            const snap = await getDoc(docRef);
+
+            if (snap.exists()) {
+                prodDados = snap.data();
+                document.getElementById('prod-nome').innerText = prodDados.nome;
+                document.getElementById('prod-preco').innerText = `R$ ${prodDados.preco}`;
+                document.getElementById('prod-img').src = prodDados.imagem;
+                
+                // CORREÇÃO: Inserindo a descrição no HTML
+                document.getElementById('prod-descricao').innerText = prodDados.descricao || "Sem descrição disponível.";
+                
+                document.getElementById('carregando').style.display = 'none';
+                document.getElementById('conteudo-produto').style.display = 'block';
+                
+                iniciarBotaoPagamento();
+            } else {
+                alert("Produto não encontrado!");
+                window.location.href = "index.html";
             }
         }
 
-        const renderizarCheckout = async () => {
-            const settings = {
+        // 3. Lógica Mercado Pago
+        async function iniciarBotaoPagamento() {
+            mp.bricks().create("wallet", "wallet_container", {
                 initialization: {
                     amount: parseFloat(prodDados.preco),
-                    payer: {
-                        email: "cliente@email.com",
-                        entity_type: "individual"
-                    }
-                },
-                customization: {
-                    visual: { theme: 'dark' },
-                    paymentMethods: {
-                        creditCard: 'all',
-                        bankTransfer: 'all', 
-                        maxInstallments: 12
-                    }
+                    preferenceId: await criarPreferencia(), 
                 },
                 callbacks: {
-                    onReady: () => {
-                        document.getElementById('loading-checkout').style.display = 'none';
-                    },
-                    onError: (err) => console.error(err),
-                    onSubmit: ({ formData }) => {
-                        return new Promise((resolve, reject) => {
-                            enviarPagamento(formData).then(resolve).catch(reject);
-                        });
-                    }
+                    onReady: () => console.log("Botão MP Pronto"),
+                    onSubmit: (formData) => enviarPagamento(formData)
                 }
-            };
-            window.paymentBrickController = await bricksBuilder.create('payment', 'paymentBrick_container', settings);
-        };
-
-        async function enviarPagamento(formData) {
-            const payload = {
-                transaction_amount: formData.transaction_amount,
-                token: formData.token,
-                description: prodDados.nome,
-                installments: formData.installments,
-                payment_method_id: formData.payment_method_id,
-                issuer_id: formData.issuer_id,
-                payer: {
-                    email: formData.payer.email,
-                    identification: formData.payer.identification,
-                    entity_type: "individual"
-                }
-            };
-
-            try {
-                const res = await fetch(PROXY + encodeURIComponent(API_URL), {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                        "X-Idempotency-Key": Math.random().toString(36).substring(7)
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const result = await res.json();
-
-                if (result.status === "approved") {
-                    window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
-                } else if (result.status === "pending" && result.payment_method_id === "pix") {
-                    abrirModalPix(result);
-                } else {
-                    alert("Pagamento recusado: " + (result.status_detail || "Verifique os dados"));
-                }
-            } catch (error) {
-                alert("Erro na conexão.");
-            }
+            });
         }
 
-        function abrirModalPix(dados) {
-            const info = dados.point_of_interaction.transaction_data;
-            document.getElementById('area-qrcode').innerHTML = `<img src="data:image/png;base64,${info.qr_code_base64}" class="qr-img" alt="QR Code" />`;
-            document.getElementById('texto-pix').value = info.qr_code;
-            document.getElementById('modal-pix-entrega').style.display = 'flex';
-            
-            const check = setInterval(async () => {
-                const res = await fetch(PROXY + encodeURIComponent(API_URL + "/" + dados.id), {
-                    headers: { "Authorization": `Bearer ${ACCESS_TOKEN}` }
-                });
-                const statusData = await res.json();
-                if (statusData.status === "approved") {
-                    clearInterval(check);
-                    window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
-                }
-            }, 3000);
+        async function criarPreferencia() {
+            // Aqui você chamaria seu backend. Como estamos usando direto no front (via proxy):
+            // Nota: Para teste, se você não tiver backend, use o Checkout Pro ou PIX direto.
+            return "ID_DA_PREFERENCIA"; // O ideal é gerar isso via Cloud Function
         }
 
         window.copiarPixChave = () => {
-            const campo = document.getElementById("texto-pix");
-            campo.select();
-            document.execCommand("copy");
-            alert("Copiado!");
+            const t = document.getElementById('texto-pix').innerText;
+            navigator.clipboard.writeText(t);
+            alert("Código PIX copiado!");
         };
 
-        iniciar();
+        carregar();
     </script>
 </body>
 </html>

@@ -71,3 +71,17 @@ input, textarea {
     background: #111827; padding: 25px; border-radius: 15px; text-align: center; 
     max-width: 350px; width: 90%; border: 2px solid #6366f1; color: white;
 }
+
+.sidebar {
+    height: 100%; width: 250px; position: fixed; z-index: 1000;
+    top: 0; left: 0; background-color: #111827; overflow-x: hidden;
+    padding-top: 20px; border-right: 1px solid #334155;
+}
+.sidebar a {
+    padding: 15px 25px; text-decoration: none; font-size: 18px;
+    color: #94a3b8; display: block; transition: 0.3s;
+}
+.sidebar a:hover { color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+.main-content { margin-left: 250px; padding: 20px; } /* Empurra o conteúdo para o lado */
+
+#admin-link { display: none; color: #f59e0b; } /* Escondido por padrão */
