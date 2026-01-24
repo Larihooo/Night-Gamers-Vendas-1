@@ -3,48 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalhes do Produto - Night Gamers</title>
+    <title>Detalhes - Night Gamers</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <style>
-        /* Estilos da Sidebar */
-        .sidebar {
-            height: 100%; width: 250px; position: fixed; z-index: 1000;
-            top: 0; left: 0; background-color: #111827; overflow-x: hidden;
-            padding-top: 20px; border-right: 1px solid #334155;
-        }
-        .sidebar h2 { color: white; text-align: center; font-size: 1.5rem; margin-bottom: 30px; }
-        .sidebar a {
-            padding: 15px 25px; text-decoration: none; font-size: 18px;
-            color: #94a3b8; display: block; transition: 0.3s;
-        }
-        .sidebar a:hover { color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+        /* Sidebar (mesmo estilo do index) */
+        .sidebar { height: 100vh; width: 250px; position: fixed; z-index: 1000; top: 0; left: 0; background: #0f172a; border-right: 1px solid #334155; display: flex; flex-direction: column; padding-top: 20px; }
+        .sidebar h2 { color: #6366f1; text-align: center; margin-bottom: 30px; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; color: #94a3b8; display: flex; align-items: center; gap: 10px; }
         .main-content { margin-left: 250px; padding: 20px; }
-        #admin-link { display: none; color: #f59e0b; font-weight: bold; }
-
-        /* Ajustes Mobile */
-        @media screen and (max-width: 768px) {
-            .sidebar { width: 60px; }
-            .sidebar h2, .sidebar span { display: none; }
-            .main-content { margin-left: 60px; }
-        }
-
-        /* Card de Detalhes */
-        .detalhes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
-        .img-detalhe { width: 100%; border-radius: 15px; border: 1px solid #334155; }
-        .desc-texto { color: #94a3b8; line-height: 1.6; margin: 20px 0; font-size: 1.1rem; }
-
-        /* Estilo do Modal PIX */
-        #modal-pix-entrega {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center;
-        }
-        .pix-box { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; border: 2px solid #6366f1; }
-        .qr-img { background: white; padding: 10px; border-radius: 10px; margin: 20px 0; width: 200px; }
+        #admin-link { display: none; color: #f59e0b !important; }
+        
+        .detalhes-container { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 20px; }
+        .img-grande { width: 100%; max-width: 400px; border-radius: 15px; border: 1px solid #334155; }
+        .info-box { flex: 1; min-width: 300px; }
+        
+        /* Modal PIX */
+        #modal-pix { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center; }
+        .pix-card { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; border: 2px solid #6366f1; }
+        .qr-img { background: white; padding: 10px; border-radius: 10px; width: 200px; margin: 15px 0; }
     </style>
 </head>
 <body>
-
     <div class="sidebar">
         <h2>Night Gamers</h2>
         <a href="index.html">🏠 <span>Início</span></a>
@@ -54,37 +34,28 @@
     </div>
 
     <div class="main-content">
-        <div class="container">
-            <div id="carregando">Carregando detalhes...</div>
-            
-            <div id="conteudo-produto" style="display:none;">
-                <div class="detalhes-grid">
-                    <div>
-                        <img id="prod-img" src="" class="img-detalhe">
-                    </div>
-                    <div class="card">
-                        <h1 id="prod-nome"></h1>
-                        <div id="prod-preco" style="font-size: 2rem; color: var(--accent); font-weight: bold;"></div>
-                        
-                        <div id="prod-descricao" class="desc-texto"></div>
-
-                        <hr style="border: 0; border-top: 1px solid #334155; margin: 20px 0;">
-                        
-                        <h3>Finalizar Pagamento</h3>
-                        <div id="wallet_container"></div> </div>
+        <div id="loading">Carregando...</div>
+        <div id="produto-detalhe" style="display:none">
+            <div class="detalhes-container">
+                <img id="p-img" class="img-grande">
+                <div class="info-box card">
+                    <h1 id="p-nome"></h1>
+                    <h2 id="p-preco" style="color:var(--accent)"></h2>
+                    <p id="p-desc" style="color:#94a3b8; margin: 20px 0; line-height:1.6"></p>
+                    <hr style="border:0; border-top:1px solid #333; margin:20px 0">
+                    <div id="wallet_container"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="modal-pix-entrega">
-        <div class="pix-box">
-            <h2 style="color:white">Pague com PIX</h2>
-            <div id="area-qrcode"></div>
-            <p style="color:#94a3b8; font-size: 0.8rem;">Aponte a câmera ou copie o código</p>
-            <button onclick="copiarPixChave()" style="background:#334155; margin-top:10px">Copiar Código PIX</button>
-            <p id="texto-pix" style="display:none"></p>
-            <div style="margin-top:20px; color:var(--accent)">Aguardando pagamento... 🔄</div>
+    <div id="modal-pix">
+        <div class="pix-card">
+            <h3>Pague com PIX</h3>
+            <div id="qr-code-area"></div>
+            <button onclick="copiarPix()">Copiar Código PIX</button>
+            <p id="pix-texto" style="display:none"></p>
+            <p style="margin-top:15px; color:var(--primary)">Aguardando pagamento... 🔄</p>
         </div>
     </div>
 
@@ -93,69 +64,43 @@
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
+        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d');
         const params = new URLSearchParams(window.location.search);
         const id = params.get('id');
-        let prodDados = null;
+        let dadosProd = null;
 
-        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d', { locale: 'pt-BR' });
-
-        // 1. Controle de Visibilidade do Admin na Sidebar
         onAuthStateChanged(auth, (user) => {
-            if (user && user.email === ADMIN_EMAIL) {
-                document.getElementById('admin-link').style.display = 'block';
-            }
+            if (user && user.email === ADMIN_EMAIL) document.getElementById('admin-link').style.display = 'flex';
         });
 
-        // 2. Carregar Dados do Produto
         async function carregar() {
-            if(!id) { window.location.href = "index.html"; return; }
-            
-            const docRef = doc(db, "produtos", id);
-            const snap = await getDoc(docRef);
+            const snap = await getDoc(doc(db, "produtos", id));
+            if(snap.exists()) {
+                dadosProd = snap.data();
+                document.getElementById('p-nome').innerText = dadosProd.nome;
+                document.getElementById('p-preco').innerText = "R$ " + dadosProd.preco;
+                document.getElementById('p-img').src = dadosProd.imagem;
+                document.getElementById('p-desc').innerText = dadosProd.descricao || "Sem descrição.";
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('produto-detalhe').style.display = 'block';
 
-            if (snap.exists()) {
-                prodDados = snap.data();
-                document.getElementById('prod-nome').innerText = prodDados.nome;
-                document.getElementById('prod-preco').innerText = `R$ ${prodDados.preco}`;
-                document.getElementById('prod-img').src = prodDados.imagem;
-                
-                // CORREÇÃO: Inserindo a descrição no HTML
-                document.getElementById('prod-descricao').innerText = prodDados.descricao || "Sem descrição disponível.";
-                
-                document.getElementById('carregando').style.display = 'none';
-                document.getElementById('conteudo-produto').style.display = 'block';
-                
-                iniciarBotaoPagamento();
-            } else {
-                alert("Produto não encontrado!");
-                window.location.href = "index.html";
+                mp.bricks().create("wallet", "wallet_container", {
+                    initialization: { amount: parseFloat(dadosProd.preco) },
+                    callbacks: { onSubmit: (formData) => processarPagamento(formData) }
+                });
             }
         }
 
-        // 3. Lógica Mercado Pago
-        async function iniciarBotaoPagamento() {
-            mp.bricks().create("wallet", "wallet_container", {
-                initialization: {
-                    amount: parseFloat(prodDados.preco),
-                    preferenceId: await criarPreferencia(), 
-                },
-                callbacks: {
-                    onReady: () => console.log("Botão MP Pronto"),
-                    onSubmit: (formData) => enviarPagamento(formData)
-                }
-            });
+        // Simulação de processamento (Aqui você conectaria ao seu proxy/backend)
+        async function processarPagamento(data) {
+            console.log("Iniciando pagamento para:", dadosProd.nome);
+            // Lógica do Mercado Pago aqui...
         }
 
-        async function criarPreferencia() {
-            // Aqui você chamaria seu backend. Como estamos usando direto no front (via proxy):
-            // Nota: Para teste, se você não tiver backend, use o Checkout Pro ou PIX direto.
-            return "ID_DA_PREFERENCIA"; // O ideal é gerar isso via Cloud Function
-        }
-
-        window.copiarPixChave = () => {
-            const t = document.getElementById('texto-pix').innerText;
-            navigator.clipboard.writeText(t);
-            alert("Código PIX copiado!");
+        window.copiarPix = () => {
+            navigator.clipboard.writeText(document.getElementById('pix-texto').innerText);
+            alert("PIX Copiado!");
         };
 
         carregar();

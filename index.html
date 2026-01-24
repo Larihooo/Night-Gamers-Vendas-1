@@ -6,81 +6,54 @@
     <title>Night Gamers | Loja Oficial</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; margin-top: 30px; }
-        .product-card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; overflow: hidden; transition: 0.4s; display: flex; flex-direction: column; cursor: pointer; }
-        .product-card:hover { transform: translateY(-8px); border-color: var(--primary); }
-        .card-img-container { width: 100%; height: 200px; background: #000; overflow:hidden; }
-        .card-img { width: 100%; height: 100%; object-fit: cover; transition:0.5s }
-        .product-card:hover .card-img { transform: scale(1.1); }
-        .card-content { padding: 20px; flex-grow: 1; }
+        .sidebar { height: 100vh; width: 250px; position: fixed; z-index: 1000; top: 0; left: 0; background: #0f172a; border-right: 1px solid #334155; display: flex; flex-direction: column; padding-top: 20px; }
+        .sidebar h2 { color: #6366f1; text-align: center; margin-bottom: 30px; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; color: #94a3b8; display: flex; align-items: center; gap: 10px; transition: 0.3s; }
+        .sidebar a:hover { color: white; background: rgba(99, 102, 241, 0.1); }
+        .main-content { margin-left: 250px; padding: 20px; }
+        #admin-link { display: none; color: #f59e0b !important; font-weight: bold; margin-top: auto; margin-bottom: 20px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span, .sidebar h2 { display: none; } .main-content { margin-left: 70px; } }
     </style>
 </head>
 <body>
     <div class="sidebar">
-    <h2 style="text-align:center; color:white;">Night Gamers</h2>
-    <a href="index.html">🏠 Início</a>
-    <a href="feed.html">📱 Feed Social</a>
-    <a href="perfil.html">👤 Minha Conta</a>
-    <a href="admin.html" id="admin-link">⚙️ Painel Admin</a>
+        <h2>Night Gamers</h2>
+        <a href="index.html" style="color:white; border-left: 4px solid #6366f1;">🏠 <span>Início</span></a>
+        <a href="feed.html">📱 <span>Feed Social</span></a>
+        <a href="perfil.html">👤 <span>Minha Conta</span></a>
+        <a href="admin.html" id="admin-link">⚙️ <span>Painel Admin</span></a>
     </div>
 
-    <nav>
-        <div style="font-weight:900; font-size:1.5rem;">NIGHT <span style="color:var(--primary)">GAMERS</span></div>
-        <div id="nav-links"></div>
-    </nav>
-
-    <div class="container">
-        <header style="margin-bottom: 40px; text-align: center; margin-top:20px">
-            <h1 style="font-size: 2.5rem;">Equipamentos de <span style="color:var(--primary)">Elite</span></h1>
-        </header>
-
-        <div class="card" style="border-radius:50px; padding:10px 20px;">
-            <input type="text" id="search" placeholder="🔍 Buscar produto..." onkeyup="render()" style="border:none; background:transparent; margin:0;">
+    <div class="main-content">
+        <div class="container">
+            <h1>Produtos Disponíveis</h1>
+            <div id="grid-produtos" class="product-grid">Carregando produtos...</div>
         </div>
-
-        <div id="grid" class="product-grid">Carregando...</div>
     </div>
 
     <script type="module">
-        import { db, auth, ADMIN_EMAIL } from './firebase.js';
+        import { db, auth, ADMIN_EMAIL } from './firebase.js?v=1';
+        import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-        import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-
-        let produtos = [];
 
         onAuthStateChanged(auth, (user) => {
-            const nav = document.getElementById('nav-links');
-            if(user) {
-                let menu = `<a href="perfil.html" style="color:white; margin-right:15px">Conta</a>`;
-                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent); font-weight:bold;">Painel</a>`;
-                nav.innerHTML = menu;
-            } else {
-                nav.innerHTML = `<a href="login.html" style="background:var(--primary); padding: 8px 20px; border-radius: 8px;">Entrar</a>`;
-            }
+            if (user && user.email === ADMIN_EMAIL) document.getElementById('admin-link').style.display = 'flex';
         });
 
-        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
-            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
-            render();
-        });
-
-        window.render = () => {
-            const termo = document.getElementById('search').value.toLowerCase();
-            const grid = document.getElementById('grid');
+        onSnapshot(collection(db, "produtos"), (snap) => {
+            const grid = document.getElementById('grid-produtos');
             grid.innerHTML = "";
-            
-            produtos.filter(p => p.nome.toLowerCase().includes(termo)).forEach(p => {
+            snap.forEach(doc => {
+                const p = doc.data();
                 grid.innerHTML += `
-                <div class="product-card" onclick="window.location.href='detalhes.html?id=${p.id}'">
-                    <div class="card-img-container"><img src="${p.imagem}" class="card-img"></div>
-                    <div class="card-content">
+                    <div class="card" onclick="window.location.href='detalhes.html?id=${doc.id}'" style="cursor:pointer">
+                        <img src="${p.imagem}" style="width:100%; height:180px; object-fit:cover; border-radius:10px">
                         <h3>${p.nome}</h3>
-                        <div style="color:var(--accent); font-size:1.5rem; font-weight:bold; margin:10px 0">R$ ${p.preco}</div>
-                        <button>Comprar</button>
-                    </div>
-                </div>`;
+                        <p style="color:var(--accent); font-weight:bold">R$ ${p.preco}</p>
+                    </div>`;
             });
-        };
+        });
     </script>
 </body>
 </html>

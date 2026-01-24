@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Feed - Night Gamers</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .sidebar { height: 100vh; width: 250px; position: fixed; z-index: 1000; top: 0; left: 0; background: #0f172a; border-right: 1px solid #334155; display: flex; flex-direction: column; padding-top: 20px; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .post-card { background: #1e293b; padding: 15px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #334155; }
+        .post-img { width: 100%; border-radius: 10px; margin-top: 10px; }
+        .btn-postar { background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Night Gamers</h2>
+        <a href="index.html">🏠 <span>Início</span></a>
+        <a href="feed.html" style="color:white; border-left: 4px solid #6366f1;">📱 <span>Feed Social</span></a>
+        <a href="perfil.html">👤 <span>Minha Conta</span></a>
+        <a href="admin.html" id="admin-link">⚙️ <span>Painel Admin</span></a>
+    </div>
+
+    <div class="main-content">
+        <div class="container" style="max-width:600px">
+            <div class="card">
+                <textarea id="post-texto" placeholder="O que há de novo?" style="width:100%; height:80px; background:transparent; border:none; color:white; font-size:1.1rem"></textarea>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px">
+                    <input type="file" id="post-file" accept="image/*,video/*">
+                    <button class="btn-postar" id="btn-envio">Postar</button>
+                </div>
+            </div>
+
+            <div id="lista-feed">Carregando feed...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { db, auth, storage, ADMIN_EMAIL } from './firebase.js?v=1';
+        import { collection, addDoc, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+
+        let userLogado = null;
+        onAuthStateChanged(auth, (user) => {
+            userLogado = user;
+            if (user && user.email === ADMIN_EMAIL) document.getElementById('admin-link').style.display = 'flex';
+        });
+
+        document.getElementById('btn-envio').onclick = async () => {
+            if(!userLogado) return alert("Faça login para postar!");
+            const texto = document.getElementById('post-texto').value;
+            const file = document.getElementById('post-file').files[0];
+            const btn = document.getElementById('btn-envio');
+
+            btn.disabled = true;
+            btn.innerText = "Postando...";
+
+            let url = "";
+            if(file) {
+                const sRef = ref(storage, `feed/${Date.now()}_${file.name}`);
+                await uploadBytes(sRef, file);
+                url = await getDownloadURL(sRef);
+            }
+
+            await addDoc(collection(db, "feed"), {
+                texto, url, user: userLogado.email, data: Date.now(), tipo: file?.type.startsWith('video') ? 'v' : 'i'
+            });
+
+            document.getElementById('post-texto').value = "";
+            btn.disabled = false;
+            btn.innerText = "Postar";
+        };
+
+        const q = query(collection(db, "feed"), orderBy("data", "desc"));
+        onSnapshot(q, (snap) => {
+            const lista = document.getElementById('lista-feed');
+            lista.innerHTML = "";
+            snap.forEach(doc => {
+                const p = doc.data();
+                const media = p.tipo === 'v' ? `<video src="${p.url}" controls class="post-img"></video>` : (p.url ? `<img src="${p.url}" class="post-img">` : "");
+                lista.innerHTML += `
+                    <div class="post-card">
+                        <strong style="color:#6366f1">${p.user.split('@')[0]}</strong>
+                        <p>${p.texto}</p>
+                        ${media}
+                    </div>`;
+            });
+        });
+    </script>
+</body>
+</html>
