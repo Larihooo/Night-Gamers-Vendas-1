@@ -3,28 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detalhes - Night Gamers</title>
+    <title>Detalhes do Produto - Night Gamers</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
     <style>
-        /* Sidebar (mesmo estilo do index) */
+        /* Sidebar Estilizada */
         .sidebar { height: 100vh; width: 250px; position: fixed; z-index: 1000; top: 0; left: 0; background: #0f172a; border-right: 1px solid #334155; display: flex; flex-direction: column; padding-top: 20px; }
-        .sidebar h2 { color: #6366f1; text-align: center; margin-bottom: 30px; }
-        .sidebar a { padding: 15px 25px; text-decoration: none; color: #94a3b8; display: flex; align-items: center; gap: 10px; }
-        .main-content { margin-left: 250px; padding: 20px; }
-        #admin-link { display: none; color: #f59e0b !important; }
-        
-        .detalhes-container { display: flex; gap: 30px; flex-wrap: wrap; margin-top: 20px; }
-        .img-grande { width: 100%; max-width: 400px; border-radius: 15px; border: 1px solid #334155; }
-        .info-box { flex: 1; min-width: 300px; }
-        
+        .sidebar h2 { color: #6366f1; text-align: center; margin-bottom: 30px; font-size: 1.5rem; }
+        .sidebar a { padding: 15px 25px; text-decoration: none; color: #94a3b8; display: flex; align-items: center; gap: 10px; transition: 0.3s; border-left: 4px solid transparent; }
+        .sidebar a:hover { color: white; background: rgba(99, 102, 241, 0.1); }
+        .main-content { margin-left: 250px; padding: 40px; min-height: 100vh; }
+        #admin-link { display: none; color: #f59e0b !important; font-weight: bold; margin-top: auto; margin-bottom: 20px; }
+
+        /* Grid de Detalhes */
+        .detalhes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+        .prod-img { width: 100%; border-radius: 20px; border: 1px solid #334155; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .info-card { background: #1e293b; padding: 30px; border-radius: 20px; border: 1px solid #334155; }
+        .preco-tag { font-size: 2.5rem; color: #6366f1; font-weight: bold; margin: 15px 0; }
+        .descricao-texto { color: #94a3b8; line-height: 1.7; font-size: 1.1rem; margin-bottom: 30px; white-space: pre-wrap; }
+
         /* Modal PIX */
-        #modal-pix { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; justify-content: center; align-items: center; }
-        .pix-card { background: #1e293b; padding: 30px; border-radius: 20px; text-align: center; border: 2px solid #6366f1; }
-        .qr-img { background: white; padding: 10px; border-radius: 10px; width: 200px; margin: 15px 0; }
+        #modal-pix { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; }
+        .pix-container { background: #1e293b; padding: 40px; border-radius: 25px; text-align: center; border: 2px solid #6366f1; max-width: 400px; }
+        .qr-placeholder { background: white; padding: 15px; border-radius: 15px; margin: 20px auto; width: 220px; height: 220px; }
+
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; } .sidebar span, .sidebar h2 { display: none; }
+            .main-content { margin-left: 70px; }
+            .detalhes-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+
     <div class="sidebar">
         <h2>Night Gamers</h2>
         <a href="index.html">🏠 <span>Início</span></a>
@@ -34,76 +45,113 @@
     </div>
 
     <div class="main-content">
-        <div id="loading">Carregando...</div>
-        <div id="produto-detalhe" style="display:none">
-            <div class="detalhes-container">
-                <img id="p-img" class="img-grande">
-                <div class="info-box card">
-                    <h1 id="p-nome"></h1>
-                    <h2 id="p-preco" style="color:var(--accent)"></h2>
-                    <p id="p-desc" style="color:#94a3b8; margin: 20px 0; line-height:1.6"></p>
-                    <hr style="border:0; border-top:1px solid #333; margin:20px 0">
-                    <div id="wallet_container"></div>
+        <div id="loading-state">Carregando detalhes do produto...</div>
+        
+        <div id="produto-conteudo" style="display: none;">
+            <div class="detalhes-grid">
+                <img id="display-img" class="prod-img" src="" alt="Produto">
+                
+                <div class="info-card">
+                    <h1 id="display-nome" style="margin:0"></h1>
+                    <div id="display-preco" class="preco-tag"></div>
+                    <div id="display-desc" class="descricao-texto"></div>
+                    
+                    <div style="background: #0f172a; padding: 20px; border-radius: 15px;">
+                        <h3 style="margin-top:0; font-size: 1rem; color: #64748b;">FORMA DE PAGAMENTO</h3>
+                        <div id="wallet_container"></div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="modal-pix">
-        <div class="pix-card">
-            <h3>Pague com PIX</h3>
-            <div id="qr-code-area"></div>
-            <button onclick="copiarPix()">Copiar Código PIX</button>
-            <p id="pix-texto" style="display:none"></p>
-            <p style="margin-top:15px; color:var(--primary)">Aguardando pagamento... 🔄</p>
+        <div class="pix-container">
+            <h2 style="color:white; margin-top:0">Pagamento PIX</h2>
+            <div id="pix-qrcode" class="qr-placeholder">
+                </div>
+            <p style="color:#94a3b8; font-size: 0.9rem;">Escaneie o QR Code ou copie a chave abaixo:</p>
+            <button id="btn-copy-pix" style="width:100%; margin-top:10px;">Copiar Chave PIX</button>
+            <div id="pix-copia-cola" style="display:none"></div>
+            <p style="margin-top:25px; color:#6366f1; font-weight:bold;">Aguardando aprovação... 🔄</p>
         </div>
     </div>
 
     <script type="module">
+        // IMPORTAÇÃO ÚNICA: Pegamos o que precisamos do seu firebase.js
         import { db, auth, ADMIN_EMAIL } from './firebase.js?v=1';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
         import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d');
         const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
-        let dadosProd = null;
+        const produtoId = params.get('id');
+        let dadosDoProduto = null;
 
+        // Inicializa Mercado Pago
+        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d', { locale: 'pt-BR' });
+
+        // 1. Controle de acesso e Admin
         onAuthStateChanged(auth, (user) => {
-            if (user && user.email === ADMIN_EMAIL) document.getElementById('admin-link').style.display = 'flex';
+            if (user && user.email === ADMIN_EMAIL) {
+                document.getElementById('admin-link').style.display = 'flex';
+            }
         });
 
-        async function carregar() {
-            const snap = await getDoc(doc(db, "produtos", id));
-            if(snap.exists()) {
-                dadosProd = snap.data();
-                document.getElementById('p-nome').innerText = dadosProd.nome;
-                document.getElementById('p-preco').innerText = "R$ " + dadosProd.preco;
-                document.getElementById('p-img').src = dadosProd.imagem;
-                document.getElementById('p-desc').innerText = dadosProd.descricao || "Sem descrição.";
-                
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('produto-detalhe').style.display = 'block';
+        // 2. Carregar dados do Firestore
+        async function carregarProduto() {
+            if (!produtoId) { window.location.href = 'index.html'; return; }
 
-                mp.bricks().create("wallet", "wallet_container", {
-                    initialization: { amount: parseFloat(dadosProd.preco) },
-                    callbacks: { onSubmit: (formData) => processarPagamento(formData) }
-                });
+            const docRef = doc(db, "produtos", produtoId);
+            const snap = await getDoc(docRef);
+
+            if (snap.exists()) {
+                dadosDoProduto = snap.data();
+                
+                // Preencher tela
+                document.getElementById('display-nome').innerText = dadosDoProduto.nome;
+                document.getElementById('display-preco').innerText = `R$ ${dadosDoProduto.preco}`;
+                document.getElementById('display-img').src = dadosDoProduto.imagem;
+                document.getElementById('display-desc').innerText = dadosDoProduto.descricao || "Sem descrição disponível.";
+                
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('produto-conteudo').style.display = 'block';
+
+                renderizarBotaoPagamento();
+            } else {
+                alert("Produto não encontrado!");
+                window.location.href = 'index.html';
             }
         }
 
-        // Simulação de processamento (Aqui você conectaria ao seu proxy/backend)
-        async function processarPagamento(data) {
-            console.log("Iniciando pagamento para:", dadosProd.nome);
-            // Lógica do Mercado Pago aqui...
+        // 3. Integração Mercado Pago
+        function renderizarBotaoPagamento() {
+            mp.bricks().create("wallet", "wallet_container", {
+                initialization: {
+                    amount: parseFloat(dadosDoProduto.preco),
+                },
+                callbacks: {
+                    onSubmit: (formData) => {
+                        return new Promise((resolve, reject) => {
+                            // Aqui você chamaria sua função enviarPagamento(formData)
+                            // que criamos anteriormente usando o AllOrigins Proxy
+                            console.log("Iniciando fluxo de pagamento...");
+                            resolve();
+                        });
+                    }
+                }
+            });
         }
 
+        // Funções Globais (para os botões do modal)
         window.copiarPix = () => {
-            navigator.clipboard.writeText(document.getElementById('pix-texto').innerText);
-            alert("PIX Copiado!");
-        };
+            const texto = document.getElementById('pix-copia-cola').innerText;
+            navigator.clipboard.writeText(texto);
+            alert("Chave PIX copiada!");
+        }
 
-        carregar();
+        document.getElementById('btn-copy-pix').onclick = window.copiarPix;
+
+        carregarProduto();
     </script>
 </body>
 </html>
