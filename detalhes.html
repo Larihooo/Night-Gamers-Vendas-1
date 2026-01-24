@@ -1,45 +1,55 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8"><title>Detalhes</title>
+    <meta charset="UTF-8">
+    <title>Detalhes do Produto</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
 </head>
 <body>
-    <div class="sidebar">... (mesmo da index) ...</div>
-    <div class="main-content">
-        <div class="main-content">
-    <a href="javascript:history.back()" class="btn-voltar">
-        ⬅ Voltar
-    </a>
-    </div>
-        <div id="conteudo" class="card" style="display:none; max-width:800px; margin:auto">
-            <img id="p-img" style="width:100%; border-radius:15px">
-            <h1 id="p-nome"></h1>
-            <p id="p-desc" style="color:#94a3b8"></p>
-            <h2 id="p-preco" style="color:#6366f1"></h2>
+    <div class="container">
+        <button onclick="window.location.href='index.html'" style="margin-bottom: 20px;">⬅ Voltar para Loja</button>
+        
+        <div id="produto-detalhes" class="card">
+            <img id="p-imagem" style="width:100%; max-width:400px; border-radius:10px;">
+            <h1 id="p-nome">Carregando...</h1>
+            <p id="p-descricao" style="color: #666; margin: 15px 0;"></p>
+            <h2 id="p-preco" style="color: #6366f1;"></h2>
+            
+            <hr>
             <div id="wallet_container"></div>
         </div>
     </div>
-    <script type="module">
-        import { db, auth } from './firebase.js?v=1';
-        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d');
-        const id = new URLSearchParams(location.search).get('id');
 
-        async function carregar() {
-            const s = await getDoc(doc(db, "produtos", id));
-            if(s.exists()) {
-                const p = s.data();
+    <script type="module">
+        import { db } from './firebase.js?v=1';
+        import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+
+        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d', { locale: 'pt-BR' });
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id');
+
+        async function carregarProduto() {
+            if (!id) return;
+            const docRef = doc(db, "produtos", id);
+            const snap = await getDoc(docRef);
+
+            if (snap.exists()) {
+                const p = snap.data();
                 document.getElementById('p-nome').innerText = p.nome;
-                document.getElementById('p-desc').innerText = p.descricao;
+                document.getElementById('p-descricao').innerText = p.descricao || "Sem descrição.";
                 document.getElementById('p-preco').innerText = "R$ " + p.preco;
-                document.getElementById('p-img').src = p.imagem;
-                document.getElementById('conteudo').style.display = 'block';
-                mp.bricks().create("wallet", "wallet_container", { initialization: { amount: parseFloat(p.preco) } });
+                document.getElementById('p-imagem').src = p.imagem;
+
+                // Renderiza o botão do Mercado Pago
+                mp.bricks().create("wallet", "wallet_container", {
+                    initialization: {
+                        amount: parseFloat(p.preco),
+                    }
+                });
             }
         }
-        carregar();
+        carregarProduto();
     </script>
 </body>
 </html>
