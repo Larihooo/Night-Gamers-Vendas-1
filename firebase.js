@@ -2,7 +2,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.10/firebas
 import { getAuth } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 import { getFirestore } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-storage.js";
-
+import { db, auth, ADMIN_EMAIL, storage } from './firebase.js?v=1'; // O 'auth' vem daqui
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js"; // Aqui não pode ter 'auth'
 const firebaseConfig = {
   apiKey: "AIzaSyByiAUMQ3I94RkRbjSDF_faBtJdTWfF6Ec",
   authDomain: "siteelievn.firebaseapp.com",
@@ -71,8 +72,6 @@ async function enviarPagamento(formData) {
         alert("Erro de conexão com o servidor de pagamento.");
     }
 }
-import { auth, ADMIN_EMAIL } from './firebase.js';
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
 onAuthStateChanged(auth, (user) => {
     if (user && user.email === ADMIN_EMAIL) {
