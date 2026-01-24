@@ -1,34 +1,48 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pagamento Seguro</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pagamento Seguro - Night Gamers</title>
+    <link rel="stylesheet" href="style.css" />
+    
     <script src="https://sdk.mercadopago.com/js/v2"></script>
+    
     <style>
         .qr-img { width: 200px; height: 200px; margin: 15px auto; background: white; padding: 10px; border-radius: 8px; }
-        .spinner { border: 4px solid rgba(255,255,255,0.1); border-left-color: #6366f1; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loading-checkout { text-align: center; padding: 20px; color: #6366f1; font-weight: bold; }
+        #modal-pix-entrega {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center;
+        }
+        .pix-box {
+            background: #1e293b; padding: 30px; border-radius: 15px; text-align: center; 
+            max-width: 380px; width: 90%; border: 2px solid #6366f1;
+        }
     </style>
 </head>
 <body>
-    <nav><a href="index.html" style="color:white; text-decoration:none">⬅ Voltar</a></nav>
+    <nav>
+        <a href="index.html" style="color:white; text-decoration:none">⬅ Voltar</a>
+    </nav>
 
     <div id="modal-pix-entrega">
-        <div class="pix-container-box">
-            <h3 style="color:#6366f1">Pagamento via PIX</h3>
+        <div class="pix-box">
+            <h3 style="color:#6366f1">Pague com PIX</h3>
             <div id="area-qrcode"></div>
-            <textarea id="texto-pix" rows="4" readonly style="width:100%; background:#000; color:#fff; border:1px solid #333; font-size:0.7rem; margin-top:10px;"></textarea>
-            <button onclick="copiarPixChave()" style="margin-top:10px">Copiar Código</button>
-            <p style="font-size:0.7rem; color:#9ca3af; margin-top:10px">Aguardando confirmação...</p>
-            <div class="spinner"></div>
+            <p style="font-size: 0.8rem; margin-top:10px; color: white;">Copie o código abaixo:</p>
+            <textarea id="texto-pix" rows="3" readonly style="width:100%; background:#000; color:#fff; border:1px solid #333; font-size:0.7rem; margin-bottom:10px; padding: 10px;"></textarea>
+            <button onclick="copiarPixChave()">Copiar Código PIX</button>
+            <p style="font-size:0.7rem; color:#94a3b8; margin-top:15px">Aguardando confirmação... não feche esta página.</p>
         </div>
     </div>
 
     <div class="container" style="max-width: 600px;">
-        <div id="info-p" class="card" style="text-align: center;">Carregando produto...</div>
+        <div id="info-p" class="card" style="text-align: center;">
+            <p>Carregando informações do produto...</p>
+        </div>
         
+        <div id="loading-checkout">Preparando checkout...</div>
         <div id="paymentBrick_container"></div>
     </div>
 
@@ -36,8 +50,11 @@
         import { db } from './firebase.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        const PUBLIC_KEY = 'APP_USR-3ea70421-3dea-4d05-ba72-120110ed6365'; 
+        // CONFIGURAÇÕES
+        const PUBLIC_KEY = 'APP_USR-3ea70421-3dea-4d05-ba72-120110ed6365';
         const ACCESS_TOKEN = 'APP_USR-6959306902120043-012021-db4a82787f589fbe871162d1119c6506-1698285173';
+        const PROXY = "https://corsproxy.io/?"; 
+        const API_URL = "https://api.mercadopago.com/v1/payments";
 
         const params = new URLSearchParams(window.location.search);
         const prodId = params.get('id');
@@ -47,45 +64,51 @@
         const bricksBuilder = mp.bricks();
 
         async function iniciar() {
-            if(!prodId) { window.location.href='index.html'; return; }
-            
-            const snap = await getDoc(doc(db, "produtos", prodId));
-            if(!snap.exists()) { window.location.href='index.html'; return; }
-            
-            prodDados = snap.data();
-            
-            document.getElementById('info-p').innerHTML = `
-                <img src="${prodDados.imagem}" style="width:100px; height:100px; object-fit:cover; border-radius:10px; margin-bottom:10px">
-                <h3>${prodDados.nome}</h3>
-                <h2 style="color:var(--accent)">R$ ${prodDados.preco}</h2>
-            `;
-            renderCheckout();
+            if (!prodId) { window.location.href = 'index.html'; return; }
+
+            try {
+                const snap = await getDoc(doc(db, "produtos", prodId));
+                if (snap.exists()) {
+                    prodDados = snap.data();
+                    document.getElementById('info-p').innerHTML = `
+                        <img src="${prodDados.imagem}" style="width:100px; border-radius:10px" alt="produto" />
+                        <h3>${prodDados.nome}</h3>
+                        <h2 style="color:#22c55e">R$ ${prodDados.preco}</h2>
+                    `;
+                    renderizarCheckout();
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } catch (err) {
+                console.error("Erro Firebase:", err);
+            }
         }
 
-        const renderCheckout = async () => {
+        const renderizarCheckout = async () => {
             const settings = {
                 initialization: {
                     amount: parseFloat(prodDados.preco),
                     payer: {
-                        email: "cliente@teste.com", // E-mail inicial placeholder para evitar erro
-                        entity_type: "individual" // CORREÇÃO: Define que é pessoa física
+                        email: "cliente@email.com",
+                        entity_type: "individual"
                     }
                 },
                 customization: {
-                    visual: { style: { theme: 'dark' } },
+                    visual: { theme: 'dark' },
                     paymentMethods: {
                         creditCard: 'all',
-                        bankTransfer: 'all', // CORREÇÃO: "bankTransfer" habilita o PIX, não use "pix: all"
+                        bankTransfer: 'all', 
                         maxInstallments: 12
                     }
                 },
                 callbacks: {
-                    onReady: () => console.log("Checkout pronto"),
-                    onError: (err) => console.error("Erro MP:", err),
-                    onSubmit: ({ selectedPaymentMethod, formData }) => {
+                    onReady: () => {
+                        document.getElementById('loading-checkout').style.display = 'none';
+                    },
+                    onError: (err) => console.error(err),
+                    onSubmit: ({ formData }) => {
                         return new Promise((resolve, reject) => {
-                            // Se o usuário mudou o e-mail no formulário, o formData.payer.email vai estar atualizado
-                            processarPagamento(formData).then(resolve).catch(reject);
+                            enviarPagamento(formData).then(resolve).catch(reject);
                         });
                     }
                 }
@@ -93,71 +116,70 @@
             window.paymentBrickController = await bricksBuilder.create('payment', 'paymentBrick_container', settings);
         };
 
-        async function processarPagamento(formData) {
-            // Prepara o corpo da requisição de forma robusta
-            const body = {
+        async function enviarPagamento(formData) {
+            const payload = {
                 transaction_amount: formData.transaction_amount,
+                token: formData.token,
                 description: prodDados.nome,
+                installments: formData.installments,
+                payment_method_id: formData.payment_method_id,
+                issuer_id: formData.issuer_id,
                 payer: {
                     email: formData.payer.email,
-                    first_name: formData.payer.first_name || "Cliente",
+                    identification: formData.payer.identification,
                     entity_type: "individual"
-                },
-                payment_method_id: formData.payment_method_id,
-                token: formData.token,
-                installments: formData.installments,
-                issuer_id: formData.issuer_id,
-                identification: formData.payer.identification 
+                }
             };
 
-            console.log("Enviando pagamento...", body);
+            try {
+                const res = await fetch(PROXY + encodeURIComponent(API_URL), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${ACCESS_TOKEN}`,
+                        "X-Idempotency-Key": Math.random().toString(36).substring(7)
+                    },
+                    body: JSON.stringify(payload)
+                });
 
-            const res = await fetch("https://api.mercadopago.com/v1/payments", {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json", 
-                    "Authorization": `Bearer ${ACCESS_TOKEN}`,
-                    "X-Idempotency-Key": Math.random().toString(36).substring(7)
-                },
-                body: JSON.stringify(body)
-            });
+                const result = await res.json();
 
-            const result = await res.json();
-            console.log("Resposta MP:", result);
-
-            if(result.status === "approved") {
-                window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
-            } else if (result.status === "pending" && result.payment_method_id === "pix") {
-                abrirPix(result);
-            } else {
-                alert("Pagamento não aprovado. Motivo: " + (result.status_detail || "Verifique os dados"));
+                if (result.status === "approved") {
+                    window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
+                } else if (result.status === "pending" && result.payment_method_id === "pix") {
+                    abrirModalPix(result);
+                } else {
+                    alert("Pagamento recusado: " + (result.status_detail || "Verifique os dados"));
+                }
+            } catch (error) {
+                alert("Erro na conexão.");
             }
         }
 
-        function abrirPix(data) {
-            const qr = data.point_of_interaction.transaction_data;
-            document.getElementById('area-qrcode').innerHTML = `<img src="data:image/png;base64,${qr.qr_code_base64}" class="qr-img">`;
-            document.getElementById('texto-pix').value = qr.qr_code;
+        function abrirModalPix(dados) {
+            const info = dados.point_of_interaction.transaction_data;
+            document.getElementById('area-qrcode').innerHTML = `<img src="data:image/png;base64,${info.qr_code_base64}" class="qr-img" alt="QR Code" />`;
+            document.getElementById('texto-pix').value = info.qr_code;
             document.getElementById('modal-pix-entrega').style.display = 'flex';
             
-            const loop = setInterval(async () => {
-                const r = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+            const check = setInterval(async () => {
+                const res = await fetch(PROXY + encodeURIComponent(API_URL + "/" + dados.id), {
                     headers: { "Authorization": `Bearer ${ACCESS_TOKEN}` }
                 });
-                const d = await r.json();
-                if(d.status === "approved") {
-                    clearInterval(loop);
+                const statusData = await res.json();
+                if (statusData.status === "approved") {
+                    clearInterval(check);
                     window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
                 }
             }, 3000);
         }
 
         window.copiarPixChave = () => {
-            const copyText = document.getElementById("texto-pix");
-            copyText.select();
+            const campo = document.getElementById("texto-pix");
+            campo.select();
             document.execCommand("copy");
-            alert("Chave copiada!");
-        }
+            alert("Copiado!");
+        };
 
         iniciar();
     </script>
