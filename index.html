@@ -2,36 +2,77 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Night Gamers | Loja</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Gamers | Loja Oficial</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px; }
-        .card { background: #1e293b; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: 0.3s; }
-        .card:hover { transform: translateY(-5px); border: 1px solid #6366f1; }
-        .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 25px; margin-top: 30px; }
+        .product-card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; overflow: hidden; transition: 0.4s; display: flex; flex-direction: column; cursor: pointer; }
+        .product-card:hover { transform: translateY(-8px); border-color: var(--primary); }
+        .card-img-container { width: 100%; height: 200px; background: #000; overflow:hidden; }
+        .card-img { width: 100%; height: 100%; object-fit: cover; transition:0.5s }
+        .product-card:hover .card-img { transform: scale(1.1); }
+        .card-content { padding: 20px; flex-grow: 1; }
     </style>
 </head>
 <body>
-    <h1 style="text-align:center; color:white;">Night Gamers</h1>
-    <div id="lista-produtos" class="grid">Carregando produtos...</div>
+    <nav>
+        <div style="font-weight:900; font-size:1.5rem;">NIGHT <span style="color:var(--primary)">GAMERS</span></div>
+        <div id="nav-links"></div>
+    </nav>
+
+    <div class="container">
+        <header style="margin-bottom: 40px; text-align: center; margin-top:20px">
+            <h1 style="font-size: 2.5rem;">Equipamentos de <span style="color:var(--primary)">Elite</span></h1>
+        </header>
+
+        <div class="card" style="border-radius:50px; padding:10px 20px;">
+            <input type="text" id="search" placeholder="🔍 Buscar produto..." onkeyup="render()" style="border:none; background:transparent; margin:0;">
+        </div>
+
+        <div id="grid" class="product-grid">Carregando...</div>
+    </div>
 
     <script type="module">
-        import { db } from './firebase.js?v=1';
-        import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { db, auth, ADMIN_EMAIL } from './firebase.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { collection, query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        onSnapshot(collection(db, "produtos"), (snap) => {
-            const lista = document.getElementById('lista-produtos');
-            lista.innerHTML = "";
-            snap.forEach(doc => {
-                const p = doc.data();
-                lista.innerHTML += `
-                    <div class="card" onclick="location.href='detalhes.html?id=${doc.id}'">
-                        <img src="${p.imagem}">
-                        <h3>${p.nome}</h3>
-                        <p style="color:#6366f1; font-weight:bold;">R$ ${p.preco}</p>
-                    </div>`;
-            });
+        let produtos = [];
+
+        onAuthStateChanged(auth, (user) => {
+            const nav = document.getElementById('nav-links');
+            if(user) {
+                let menu = `<a href="perfil.html" style="color:white; margin-right:15px">Conta</a>`;
+                if(user.email === ADMIN_EMAIL) menu += `<a href="admin.html" style="color:var(--accent); font-weight:bold;">Painel</a>`;
+                nav.innerHTML = menu;
+            } else {
+                nav.innerHTML = `<a href="login.html" style="background:var(--primary); padding: 8px 20px; border-radius: 8px;">Entrar</a>`;
+            }
         });
+
+        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
+            produtos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            render();
+        });
+
+        window.render = () => {
+            const termo = document.getElementById('search').value.toLowerCase();
+            const grid = document.getElementById('grid');
+            grid.innerHTML = "";
+            
+            produtos.filter(p => p.nome.toLowerCase().includes(termo)).forEach(p => {
+                grid.innerHTML += `
+                <div class="product-card" onclick="window.location.href='detalhes.html?id=${p.id}'">
+                    <div class="card-img-container"><img src="${p.imagem}" class="card-img"></div>
+                    <div class="card-content">
+                        <h3>${p.nome}</h3>
+                        <div style="color:var(--accent); font-size:1.5rem; font-weight:bold; margin:10px 0">R$ ${p.preco}</div>
+                        <button>Comprar</button>
+                    </div>
+                </div>`;
+            });
+        };
     </script>
 </body>
 </html>

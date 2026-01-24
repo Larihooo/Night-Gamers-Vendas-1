@@ -1,60 +1,187 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <title>Detalhes do Produto</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pagamento Seguro - Night Gamers</title>
+    <link rel="stylesheet" href="style.css" />
+    
     <script src="https://sdk.mercadopago.com/js/v2"></script>
+    
     <style>
-        .detalhe-container { max-width: 600px; margin: 40px auto; padding: 20px; background: #1e293b; border-radius: 15px; }
-        .p-desc { color: #94a3b8; line-height: 1.6; margin: 20px 0; }
-        .btn-voltar { background: transparent; color: white; border: 1px solid #334155; padding: 10px; cursor: pointer; border-radius: 5px; margin-bottom: 20px; }
+        .qr-img { width: 200px; height: 200px; margin: 15px auto; background: white; padding: 10px; border-radius: 8px; }
+        #loading-checkout { text-align: center; padding: 20px; color: #6366f1; font-weight: bold; }
+        #modal-pix-entrega {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center;
+        }
+        .pix-box {
+            background: #1e293b; padding: 30px; border-radius: 15px; text-align: center; 
+            max-width: 380px; width: 90%; border: 2px solid #6366f1;
+        }
     </style>
 </head>
 <body>
-    <div class="detalhe-container">
-        <button class="btn-voltar" onclick="location.href='index.html'">⬅ Voltar</button>
-        <img id="p-img" style="width:100%; border-radius:10px;">
-        <h1 id="p-nome"></h1>
-        <div id="p-desc" class="p-desc"></div>
-        <h2 id="p-preco" style="color:#6366f1"></h2>
+    <nav>
+        <a href="index.html" style="color:white; text-decoration:none">⬅ Voltar</a>
+    </nav>
+
+    <div id="modal-pix-entrega">
+        <div class="pix-box">
+            <h3 style="color:#6366f1">Pague com PIX</h3>
+            <div id="area-qrcode"></div>
+            <p style="font-size: 0.8rem; margin-top:10px; color: white;">Copie o código abaixo:</p>
+            <textarea id="texto-pix" rows="3" readonly style="width:100%; background:#000; color:#fff; border:1px solid #333; font-size:0.7rem; margin-bottom:10px; padding: 10px;"></textarea>
+            <button onclick="copiarPixChave()">Copiar Código PIX</button>
+            <p style="font-size:0.7rem; color:#94a3b8; margin-top:15px">Aguardando confirmação... não feche esta página.</p>
+        </div>
+    </div>
+
+    <div class="container" style="max-width: 600px;">
+        <div id="info-p" class="card" style="text-align: center;">
+            <p>Carregando informações do produto...</p>
+        </div>
         
-        <hr style="border:0; border-top:1px solid #334155; margin: 25px 0;">
-        
-        <div id="wallet_container"></div>
+        <div id="loading-checkout">Preparando checkout...</div>
+        <div id="paymentBrick_container"></div>
     </div>
 
     <script type="module">
-        import { db } from './firebase.js?v=1';
+        import { db } from './firebase.js';
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d', { locale: 'pt-BR' });
-        const id = new URLSearchParams(location.search).get('id');
+        // CONFIGURAÇÕES
+        const PUBLIC_KEY = 'APP_USR-3ea70421-3dea-4d05-ba72-120110ed6365';
+        const ACCESS_TOKEN = 'APP_USR-6959306902120043-012021-db4a82787f589fbe871162d1119c6506-1698285173';
+        const PROXY = "https://corsproxy.io/?"; 
+        const API_URL = "https://api.mercadopago.com/v1/payments";
 
-        async function carregar() {
-            if(!id) return;
-            const docRef = doc(db, "produtos", id);
-            const snap = await getDoc(docRef);
+        const params = new URLSearchParams(window.location.search);
+        const prodId = params.get('id');
+        let prodDados = null;
 
-            if (snap.exists()) {
-                const p = snap.data();
-                document.getElementById('p-nome').innerText = p.nome;
-                document.getElementById('p-desc').innerText = p.descricao || "Sem descrição disponível.";
-                document.getElementById('p-preco').innerText = "R$ " + p.preco;
-                document.getElementById('p-img').src = p.imagem;
+        const mp = new MercadoPago(PUBLIC_KEY, { locale: 'pt-BR' });
+        const bricksBuilder = mp.bricks();
 
-                // Criação do botão de pagamento
-                mp.bricks().create("wallet", "wallet_container", {
-                    initialization: {
-                        amount: parseFloat(p.preco),
-                    },
-                    customization: {
-                        texts: { valueProp: 'smart_option' }
-                    }
-                });
+        async function iniciar() {
+            if (!prodId) { window.location.href = 'index.html'; return; }
+
+            try {
+                const snap = await getDoc(doc(db, "produtos", prodId));
+                if (snap.exists()) {
+                    prodDados = snap.data();
+                    document.getElementById('info-p').innerHTML = `
+                        <img src="${prodDados.imagem}" style="width:100px; border-radius:10px" alt="produto" />
+                        <h3>${prodDados.nome}</h3>
+                        <h2 style="color:#22c55e">R$ ${prodDados.preco}</h2>
+                    `;
+                    renderizarCheckout();
+                } else {
+                    window.location.href = 'index.html';
+                }
+            } catch (err) {
+                console.error("Erro Firebase:", err);
             }
         }
-        carregar();
+
+        const renderizarCheckout = async () => {
+            const settings = {
+                initialization: {
+                    amount: parseFloat(prodDados.preco),
+                    payer: {
+                        email: "cliente@email.com",
+                        entity_type: "individual"
+                    }
+                },
+                customization: {
+                    visual: { theme: 'dark' },
+                    paymentMethods: {
+                        creditCard: 'all',
+                        bankTransfer: 'all', 
+                        maxInstallments: 12
+                    }
+                },
+                callbacks: {
+                    onReady: () => {
+                        document.getElementById('loading-checkout').style.display = 'none';
+                    },
+                    onError: (err) => console.error(err),
+                    onSubmit: ({ formData }) => {
+                        return new Promise((resolve, reject) => {
+                            enviarPagamento(formData).then(resolve).catch(reject);
+                        });
+                    }
+                }
+            };
+            window.paymentBrickController = await bricksBuilder.create('payment', 'paymentBrick_container', settings);
+        };
+
+        async function enviarPagamento(formData) {
+            const payload = {
+                transaction_amount: formData.transaction_amount,
+                token: formData.token,
+                description: prodDados.nome,
+                installments: formData.installments,
+                payment_method_id: formData.payment_method_id,
+                issuer_id: formData.issuer_id,
+                payer: {
+                    email: formData.payer.email,
+                    identification: formData.payer.identification,
+                    entity_type: "individual"
+                }
+            };
+
+            try {
+                const res = await fetch(PROXY + encodeURIComponent(API_URL), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${ACCESS_TOKEN}`,
+                        "X-Idempotency-Key": Math.random().toString(36).substring(7)
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await res.json();
+
+                if (result.status === "approved") {
+                    window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
+                } else if (result.status === "pending" && result.payment_method_id === "pix") {
+                    abrirModalPix(result);
+                } else {
+                    alert("Pagamento recusado: " + (result.status_detail || "Verifique os dados"));
+                }
+            } catch (error) {
+                alert("Erro na conexão.");
+            }
+        }
+
+        function abrirModalPix(dados) {
+            const info = dados.point_of_interaction.transaction_data;
+            document.getElementById('area-qrcode').innerHTML = `<img src="data:image/png;base64,${info.qr_code_base64}" class="qr-img" alt="QR Code" />`;
+            document.getElementById('texto-pix').value = info.qr_code;
+            document.getElementById('modal-pix-entrega').style.display = 'flex';
+            
+            const check = setInterval(async () => {
+                const res = await fetch(PROXY + encodeURIComponent(API_URL + "/" + dados.id), {
+                    headers: { "Authorization": `Bearer ${ACCESS_TOKEN}` }
+                });
+                const statusData = await res.json();
+                if (statusData.status === "approved") {
+                    clearInterval(check);
+                    window.location.href = `sucesso.html?entrega=${encodeURIComponent(prodDados.entrega)}`;
+                }
+            }, 3000);
+        }
+
+        window.copiarPixChave = () => {
+            const campo = document.getElementById("texto-pix");
+            campo.select();
+            document.execCommand("copy");
+            alert("Copiado!");
+        };
+
+        iniciar();
     </script>
 </body>
 </html>
