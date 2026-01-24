@@ -2,45 +2,26 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Minha Conta</title>
+    <title>Perfil</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav><a href="index.html">⬅ Voltar</a></nav>
-    <div class="container">
+    <nav><a href="index.html" style="color:white; text-decoration:none">⬅ Voltar</a></nav>
+    <div class="container" style="max-width:400px">
         <div class="card">
-            <h2>Gerenciar Conta</h2>
-            <p>Logado como: <strong id="user-email">...</strong></p>
-            <hr style="border-color:var(--border)">
-            
-            <h4>Trocar Senha</h4>
-            <input type="password" id="nova-senha" placeholder="Nova Senha">
-            <button onclick="mudarSenha()">Atualizar Senha</button>
-            
-            <br><br>
-            <button onclick="sair()" style="background:red">Sair da Conta</button>
+            <h3>Minha Conta</h3>
+            <p id="u-email">...</p>
+            <button onclick="sair()" style="background:#ef4444">Sair</button>
         </div>
     </div>
-
     <script type="module">
         import { auth } from './firebase.js';
-        import { signOut, updatePassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
-
-        onAuthStateChanged(auth, (user) => {
-            if(user) document.getElementById('user-email').innerText = user.email;
-            else window.location.href = "login.html";
+        import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        onAuthStateChanged(auth, u => {
+            if(u) document.getElementById('u-email').innerText = u.email;
+            else window.location.href="login.html";
         });
-
-        window.mudarSenha = () => {
-            const senha = document.getElementById('nova-senha').value;
-            if(senha.length >= 6) {
-                updatePassword(auth.currentUser, senha).then(() => alert("Senha alterada!"));
-            } else alert("Mínimo 6 caracteres");
-        };
-
-        window.sair = () => {
-            signOut(auth).then(() => window.location.href = "index.html");
-        };
+        window.sair = () => signOut(auth).then(() => window.location.href="index.html");
     </script>
 </body>
 </html>

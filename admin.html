@@ -2,48 +2,111 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Admin - Night Gamers</title>
+    <title>Painel Admin</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <nav>
+        <a href="index.html" style="color:white; text-decoration:none;">⬅ Loja</a>
+        <span style="color:var(--accent);">Administração</span>
+    </nav>
+
     <div class="container">
         <div class="card">
-            <h3>Novo Produto</h3>
-            <input type="text" id="nome" placeholder="Nome">
-            <input type="text" id="preco" placeholder="Preço (Ex: 50.00)">
-            <input type="text" id="img" placeholder="URL da Imagem">
-            <textarea id="entrega" placeholder="Link/Chave de entrega"></textarea>
-            <button id="btn-add">Salvar Produto</button>
+            <h3>Gerenciar Produto</h3>
+            <input type="text" id="campo-imagem" placeholder="URL da Imagem">
+            <input type="text" id="campo-nome" placeholder="Nome do Produto">
+            <div style="display:flex; gap:10px">
+                <input type="text" id="campo-preco" placeholder="Preço (ex: 49.90)">
+                <input type="text" id="campo-estoque" placeholder="Estoque (Qtd)">
+            </div>
+            <textarea id="campo-entrega" placeholder="Entrega Digital (Link ou Código para o cliente)" rows="2"></textarea>
+            <textarea id="campo-desc" placeholder="Descrição" rows="3"></textarea>
+            
+            <button onclick="salvar()" id="btn-salvar">Publicar Produto</button>
+            <button onclick="cancelar()" id="btn-cancel" style="display:none; background:#475569; margin-top:5px">Cancelar</button>
         </div>
-        <div id="lista-admin"></div>
+
+        <div id="lista-admin" style="margin-top:20px"></div>
     </div>
 
     <script type="module">
-        import { db } from './firebase.js';
-        import { collection, addDoc, query, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
+        import { db, auth, ADMIN_EMAIL } from './firebase.js';
+        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
+        import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
-        document.getElementById('btn-add').onclick = async () => {
-            const p = {
-                nome: document.getElementById('nome').value,
-                preco: document.getElementById('preco').value,
-                imagem: document.getElementById('img').value,
-                entrega: document.getElementById('entrega').value,
-                criadoEm: new Date()
-            };
-            await addDoc(collection(db, "produtos"), p);
-            location.reload();
-        };
+        let idEdicao = null;
+        let listaProdutos = [];
 
-        onSnapshot(query(collection(db, "produtos")), (snap) => {
-            const lista = document.getElementById('lista-admin');
-            lista.innerHTML = "";
-            snap.forEach(d => {
-                const item = d.data();
-                lista.innerHTML += `<div class="card">${item.nome} <button onclick="window.del('${d.id}')" style="width:auto; background:red">X</button></div>`;
-            });
+        onAuthStateChanged(auth, (user) => {
+            if(!user || user.email !== ADMIN_EMAIL) window.location.href = "login.html";
         });
 
-        window.del = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "produtos", id)); };
+        window.salvar = async () => {
+            const dados = {
+                imagem: document.getElementById('campo-imagem').value,
+                nome: document.getElementById('campo-nome').value,
+                preco: document.getElementById('campo-preco').value,
+                estoque: parseInt(document.getElementById('campo-estoque').value) || 0,
+                entrega: document.getElementById('campo-entrega').value,
+                descricao: document.getElementById('campo-desc').value,
+                atualizadoEm: new Date()
+            };
+
+            if(!dados.nome || !dados.preco) return alert("Preencha nome e preço!");
+
+            try {
+                if(idEdicao) {
+                    await updateDoc(doc(db, "produtos", idEdicao), dados);
+                    alert("Atualizado!");
+                } else {
+                    dados.criadoEm = new Date();
+                    await addDoc(collection(db, "produtos"), dados);
+                    alert("Criado!");
+                }
+                cancelar();
+            } catch(e) { alert("Erro: " + e.message); }
+        };
+
+        window.editar = (id) => {
+            const p = listaProdutos.find(x => x.id === id);
+            if(!p) return;
+            idEdicao = id;
+            document.getElementById('campo-imagem').value = p.imagem || "";
+            document.getElementById('campo-nome').value = p.nome || "";
+            document.getElementById('campo-preco').value = p.preco || "";
+            document.getElementById('campo-estoque').value = p.estoque || 0;
+            document.getElementById('campo-entrega').value = p.entrega || "";
+            document.getElementById('campo-desc').value = p.descricao || "";
+            document.getElementById('btn-salvar').innerText = "Salvar Alterações";
+            document.getElementById('btn-cancel').style.display = "block";
+            window.scrollTo(0,0);
+        };
+
+        window.cancelar = () => {
+            idEdicao = null;
+            document.querySelectorAll('input, textarea').forEach(i => i.value = "");
+            document.getElementById('btn-salvar').innerText = "Publicar Produto";
+            document.getElementById('btn-cancel').style.display = "none";
+        };
+
+        window.deletar = async (id) => { if(confirm("Excluir?")) await deleteDoc(doc(db, "produtos", id)); };
+
+        onSnapshot(query(collection(db, "produtos"), orderBy("criadoEm", "desc")), (snap) => {
+            listaProdutos = snap.docs.map(d => ({id: d.id, ...d.data()}));
+            const div = document.getElementById('lista-admin');
+            div.innerHTML = "";
+            listaProdutos.forEach(p => {
+                div.innerHTML += `
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; padding:15px;">
+                        <div><strong>${p.nome}</strong> (R$ ${p.preco})</div>
+                        <div>
+                            <button onclick="editar('${p.id}')" style="width:auto; background:#f59e0b; padding:5px 10px;">Editar</button>
+                            <button onclick="deletar('${p.id}')" style="width:auto; background:#ef4444; padding:5px 10px;">X</button>
+                        </div>
+                    </div>`;
+            });
+        });
     </script>
 </body>
 </html>

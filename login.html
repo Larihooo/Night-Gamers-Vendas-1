@@ -6,38 +6,32 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <nav><a href="index.html">⬅ Cancelar</a></nav>
+    <nav><a href="index.html" style="color:white; text-decoration:none">⬅ Voltar</a></nav>
     <div class="container" style="max-width:400px">
         <div class="card">
             <h2 id="titulo">Entrar</h2>
             <input type="email" id="email" placeholder="E-mail">
             <input type="password" id="senha" placeholder="Senha">
             <button onclick="acao()">Confirmar</button>
-            <p style="text-align:center; cursor:pointer; margin-top:15px" onclick="trocar()">
-                <span id="texto-troca">Não tem conta? Crie uma.</span>
-            </p>
+            <p onclick="trocar()" style="text-align:center; cursor:pointer; margin-top:15px; font-size:0.9rem; color:#94a3b8">Não tem conta? Crie uma.</p>
         </div>
     </div>
-
     <script type="module">
         import { auth } from './firebase.js';
         import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-        let loginMode = true;
-
+        let modeLogin = true;
         window.trocar = () => {
-            loginMode = !loginMode;
-            document.getElementById('titulo').innerText = loginMode ? "Entrar" : "Criar Conta";
-            document.getElementById('texto-troca').innerText = loginMode ? "Não tem conta? Crie uma." : "Já tem conta? Entre.";
+            modeLogin = !modeLogin;
+            document.getElementById('titulo').innerText = modeLogin ? "Entrar" : "Criar Conta";
         };
-
         window.acao = async () => {
             const email = document.getElementById('email').value;
             const pass = document.getElementById('senha').value;
             try {
-                if(loginMode) await signInWithEmailAndPassword(auth, email, pass);
+                if(modeLogin) await signInWithEmailAndPassword(auth, email, pass);
                 else await createUserWithEmailAndPassword(auth, email, pass);
-                window.location.href = "index.html"; // Redireciona ao logar
+                window.location.href = "index.html";
             } catch(e) { alert("Erro: " + e.message); }
         };
     </script>
