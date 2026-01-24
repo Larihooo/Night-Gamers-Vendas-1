@@ -5,20 +5,23 @@
     <title>Detalhes do Produto</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <style>
+        .detalhe-container { max-width: 600px; margin: 40px auto; padding: 20px; background: #1e293b; border-radius: 15px; }
+        .p-desc { color: #94a3b8; line-height: 1.6; margin: 20px 0; }
+        .btn-voltar { background: transparent; color: white; border: 1px solid #334155; padding: 10px; cursor: pointer; border-radius: 5px; margin-bottom: 20px; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <button onclick="window.location.href='index.html'" style="margin-bottom: 20px;">⬅ Voltar para Loja</button>
+    <div class="detalhe-container">
+        <button class="btn-voltar" onclick="location.href='index.html'">⬅ Voltar</button>
+        <img id="p-img" style="width:100%; border-radius:10px;">
+        <h1 id="p-nome"></h1>
+        <div id="p-desc" class="p-desc"></div>
+        <h2 id="p-preco" style="color:#6366f1"></h2>
         
-        <div id="produto-detalhes" class="card">
-            <img id="p-imagem" style="width:100%; max-width:400px; border-radius:10px;">
-            <h1 id="p-nome">Carregando...</h1>
-            <p id="p-descricao" style="color: #666; margin: 15px 0;"></p>
-            <h2 id="p-preco" style="color: #6366f1;"></h2>
-            
-            <hr>
-            <div id="wallet_container"></div>
-        </div>
+        <hr style="border:0; border-top:1px solid #334155; margin: 25px 0;">
+        
+        <div id="wallet_container"></div>
     </div>
 
     <script type="module">
@@ -26,30 +29,32 @@
         import { doc, getDoc } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
 
         const mp = new MercadoPago('APP_USR-7e780497-69b9-4363-9a79-245f789d2d8d', { locale: 'pt-BR' });
-        const params = new URLSearchParams(window.location.search);
-        const id = params.get('id');
+        const id = new URLSearchParams(location.search).get('id');
 
-        async function carregarProduto() {
-            if (!id) return;
+        async function carregar() {
+            if(!id) return;
             const docRef = doc(db, "produtos", id);
             const snap = await getDoc(docRef);
 
             if (snap.exists()) {
                 const p = snap.data();
                 document.getElementById('p-nome').innerText = p.nome;
-                document.getElementById('p-descricao').innerText = p.descricao || "Sem descrição.";
+                document.getElementById('p-desc').innerText = p.descricao || "Sem descrição disponível.";
                 document.getElementById('p-preco').innerText = "R$ " + p.preco;
-                document.getElementById('p-imagem').src = p.imagem;
+                document.getElementById('p-img').src = p.imagem;
 
-                // Renderiza o botão do Mercado Pago
+                // Criação do botão de pagamento
                 mp.bricks().create("wallet", "wallet_container", {
                     initialization: {
                         amount: parseFloat(p.preco),
+                    },
+                    customization: {
+                        texts: { valueProp: 'smart_option' }
                     }
                 });
             }
         }
-        carregarProduto();
+        carregar();
     </script>
 </body>
 </html>

@@ -1,37 +1,35 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8"><title>Night Gamers | Início</title>
+    <meta charset="UTF-8">
+    <title>Night Gamers | Loja</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; padding: 20px; }
+        .card { background: #1e293b; border-radius: 10px; padding: 15px; cursor: pointer; text-align: center; transition: 0.3s; }
+        .card:hover { transform: translateY(-5px); border: 1px solid #6366f1; }
+        .card img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; }
+    </style>
 </head>
 <body>
-    <div class="sidebar">
-        <h2>Night Gamers</h2>
-        <a href="index.html" class="active">🏠 <span>Início</span></a>
-        <a href="feed.html">📱 <span>Feed Social</span></a>
-        <a href="perfil.html">👤 <span>Minha Conta</span></a>
-        <a href="admin.html" id="admin-link" style="display:none; color:#f59e0b">⚙️ <span>Painel Admin</span></a>
-    </div>
-    <div class="main-content">
-        <h1>Produtos</h1>
-        <div id="grid-produtos" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:20px;"></div>
-    </div>
+    <h1 style="text-align:center; color:white;">Night Gamers</h1>
+    <div id="lista-produtos" class="grid">Carregando produtos...</div>
+
     <script type="module">
-        import { db, auth, ADMIN_EMAIL } from './firebase.js?v=1';
+        import { db } from './firebase.js?v=1';
         import { collection, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore.js";
-        import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.10/firebase-auth.js";
 
-        onAuthStateChanged(auth, user => { if(user?.email === ADMIN_EMAIL) document.getElementById('admin-link').style.display='flex'; });
-
-        onSnapshot(collection(db, "produtos"), snap => {
-            const grid = document.getElementById('grid-produtos');
-            grid.innerHTML = "";
+        onSnapshot(collection(db, "produtos"), (snap) => {
+            const lista = document.getElementById('lista-produtos');
+            lista.innerHTML = "";
             snap.forEach(doc => {
                 const p = doc.data();
-                grid.innerHTML += `<div class="card" onclick="location.href='detalhes.html?id=${doc.id}'" style="cursor:pointer">
-                    <img src="${p.imagem}" style="width:100%; border-radius:10px; height:150px; object-fit:cover">
-                    <h3>${p.nome}</h3><p style="color:#6366f1">R$ ${p.preco}</p>
-                </div>`;
+                lista.innerHTML += `
+                    <div class="card" onclick="location.href='detalhes.html?id=${doc.id}'">
+                        <img src="${p.imagem}">
+                        <h3>${p.nome}</h3>
+                        <p style="color:#6366f1; font-weight:bold;">R$ ${p.preco}</p>
+                    </div>`;
             });
         });
     </script>
